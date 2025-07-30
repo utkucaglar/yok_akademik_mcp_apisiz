@@ -1,5 +1,7 @@
 # YOK Akademik MCP Server (Async)
 
+[![smithery badge](https://smithery.ai/badge/@utkucaglar/yok_akademik_mcp_apisiz)](https://smithery.ai/server/@utkucaglar/yok_akademik_mcp_apisiz)
+
 A Model Context Protocol (MCP) server that provides **async tools** for interacting with the YOK Akademik API. This server enables searching for academic profiles and analyzing collaborators in Turkish universities with improved performance and non-blocking operations.
 
 ## 🚀 Features
@@ -31,6 +33,14 @@ Get information about YOK Akademik API and available features
 * **Parameters:** None
 
 ## 🛠️ Installation
+
+### Installing via Smithery
+
+To install yok_akademik_mcp_apisiz for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@utkucaglar/yok_akademik_mcp_apisiz):
+
+```bash
+npx -y @smithery/cli install @utkucaglar/yok_akademik_mcp_apisiz --client claude
+```
 
 1. **Navigate to the project directory:**
    ```bash
