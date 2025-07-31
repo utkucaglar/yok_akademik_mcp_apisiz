@@ -1,0 +1,23 @@
+{
+  "name": "yok-akademik-scraper",
+  "version": "1.0.0",
+  "description": "YÖK Akademik veri tabanından akademisyen profilleri ve işbirlikçilerini scrape eden MCP server",
+  "author": "YOK Academic Scraper Team",
+  "license": "MIT",
+  "homepage": "https://github.com/yok-akademik-scraper-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yok-akademik-scraper-mcp.git"
+  },
+  "mcpServers": {
+    "yok-scraper": {
+      "command": "python",
+      "args": ["-m", "src.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  },
+  "keywords": ["akademik", "scraping", "yok", "akademisyen", "research", "türkiye", "academic"],
+  "categories": ["data-extraction", "research-tools", "academic-research"]
+} 
