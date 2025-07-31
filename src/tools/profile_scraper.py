@@ -254,12 +254,9 @@ class ProfileScraperTool:
                     
                     page_num += 1
                     
-                    # Smithery için sadece ilk 3 sonuç
-                    if len(profiles) >= 3:
-                        break
-                    
-                    # Hızlı scraping için sadece ilk sayfa
-                    if page_num > 1:
+                    # Smithery timeout'u önlemek için maksimum 10 sayfa
+                    if page_num > 10:
+                        logger.info(f"Smithery için 10 sayfa limitine ulaşıldı")
                         break
                         
                 except Exception as e:
