@@ -120,6 +120,7 @@ class ProfileScraperTool:
         """Async scraping işlemi"""
         try:
             logger.info(f"Async scraping başlatıldı: {session_id}")
+            logger.info(f"Request: {request.name}, field: {selected_field}, specialties: {selected_specialties}")
             
             # WebDriver ile scraping başlat
             logger.info("WebDriver oluşturuluyor...")
@@ -130,14 +131,18 @@ class ProfileScraperTool:
                     driver, request, session_id, selected_field, selected_specialties
                 )
                 
+                logger.info(f"Scraping tamamlandı: {len(profiles)} profil bulundu")
+                
                 # Sonuçları kaydet
                 await self.file_manager.save_profiles(session_id, profiles)
                 await self.file_manager.mark_session_complete(session_id, "main")
                 
-                logger.info(f"Scraping tamamlandı: {len(profiles)} profil bulundu")
+                logger.info(f"Profil verileri kaydedildi: {len(profiles)} profil")
                 
         except Exception as e:
             logger.error(f"Async scraping hatası: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             # Hata durumunda boş profil listesi kaydet
             await self.file_manager.save_profiles(session_id, [])
             await self.file_manager.mark_session_complete(session_id, "main")
@@ -159,7 +164,10 @@ class ProfileScraperTool:
         try:
             # Ana sayfaya git
             logger.info("YÖK ana sayfasına gidiliyor...")
-            await self.selenium_manager.navigate_to_page(driver, self.base_url + "AkademikArama/")
+            success = await self.selenium_manager.navigate_to_page(driver, self.base_url + "AkademikArama/")
+            if not success:
+                raise Exception("Ana sayfa yüklenemedi")
+            logger.info("Ana sayfa yüklendi")
             
             # Arama kutusunu bekle
             logger.info("Arama kutusu bekleniyor...")
@@ -173,74 +181,89 @@ class ProfileScraperTool:
             # Arama yap
             logger.info(f"Arama yapılıyor: {request.name}")
             search_box = driver.find_element(By.ID, "aramaTerim")
+            search_box.clear()
             search_box.send_keys(request.name)
-            driver.find_element(By.ID, "searchButton").click()
+            logger.info("Arama terimi girildi")
+            
+            search_button = driver.find_element(By.ID, "searchButton")
+            search_button.click()
             logger.info("Arama butonu tıklandı!")
             
-            # Akademisyenler sekmesine geç
-            if not await self.selenium_manager.wait_for_clickable(driver, By.LINK_TEXT, "Akademisyenler"):
-                raise Exception("Akademisyenler sekmesi bulunamadı")
+            # Sayfa yüklenmesini bekle
+            await asyncio.sleep(2)
             
-            driver.find_element(By.LINK_TEXT, "Akademisyenler").click()
+            # Akademisyenler sekmesine geç
+            logger.info("Akademisyenler sekmesi aranıyor...")
+            try:
+                akademisyenler_link = driver.find_element(By.LINK_TEXT, "Akademisyenler")
+                akademisyenler_link.click()
+                logger.info("Akademisyenler sekmesine geçildi")
+            except Exception as e:
+                logger.warning(f"Akademisyenler sekmesi bulunamadı: {e}")
+                # Sekme bulunamazsa devam et
             
             # Profil satırlarını topla
             while True:
                 logger.info(f"{page_num}. sayfa yükleniyor...")
                 
-                if not await self.selenium_manager.wait_for_element(driver, By.CSS_SELECTOR, "tr[id^='authorInfo_']"):
-                    logger.info("Profil satırları yüklenemedi, döngü bitiyor")
-                    break
+                # Sayfa yüklenmesini bekle
+                await asyncio.sleep(2)
                 
-                profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
-                logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
-                
-                if len(profile_rows) == 0:
-                    logger.info("Profil bulunamadı, döngü bitiyor")
-                    break
-                
-                for row in profile_rows:
-                    try:
-                        profile = await self._extract_profile_data(
-                            row, profile_id_counter, selected_field, selected_specialties
-                        )
-                        
-                        if profile:
-                            url = profile["url"]
-                            if url in profile_urls:
-                                logger.info(f"Profil zaten eklenmiş: {url}")
-                                continue
-                            
-                            profiles.append(profile)
-                            profile_urls.add(url)
-                            profile_id_counter += 1
-                            
-                            logger.info(f"Profil eklendi: {profile['name']} - {url}")
-                            
-                            # Email kontrolü
-                            if request.email and profile.get('email', '').lower() == request.email.lower():
-                                logger.info(f"Email eşleşmesi bulundu: {profile['name']} - {profile['email']}")
-                                return profiles
-                            
-                            # Limit kontrolü
-                            if len(profiles) >= request.max_results:
-                                logger.info(f"Maksimum sonuç sayısına ulaşıldı: {len(profiles)}")
-                                return profiles
+                try:
+                    profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
+                    logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
                     
-                    except Exception as e:
-                        logger.error(f"Profil satırı işlenemedi: {e}")
-                
-                # Sonraki sayfaya geç
-                if not await self._go_to_next_page(driver, page_num):
-                    break
-                
-                page_num += 1
-                
-                # Smithery için sadece ilk 3 sonuç
-                if len(profiles) >= 3:
-                    break
-                
-                # Hızlı scraping için sadece ilk sayfa
-                if page_num > 1:
+                    if len(profile_rows) == 0:
+                        logger.info("Profil bulunamadı, döngü bitiyor")
+                        break
+                    
+                    for row in profile_rows:
+                        try:
+                            profile = await self._extract_profile_data(
+                                row, profile_id_counter, selected_field, selected_specialties
+                            )
+                            
+                            if profile:
+                                url = profile["url"]
+                                if url in profile_urls:
+                                    logger.info(f"Profil zaten eklenmiş: {url}")
+                                    continue
+                                
+                                profiles.append(profile)
+                                profile_urls.add(url)
+                                profile_id_counter += 1
+                                
+                                logger.info(f"Profil eklendi: {profile['name']} - {url}")
+                                
+                                # Email kontrolü
+                                if request.email and profile.get('email', '').lower() == request.email.lower():
+                                    logger.info(f"Email eşleşmesi bulundu: {profile['name']} - {profile['email']}")
+                                    return profiles
+                                
+                                # Limit kontrolü
+                                if len(profiles) >= request.max_results:
+                                    logger.info(f"Maksimum sonuç sayısına ulaşıldı: {len(profiles)}")
+                                    return profiles
+                        
+                        except Exception as e:
+                            logger.error(f"Profil satırı işlenemedi: {e}")
+                    
+                    # Sonraki sayfaya geç
+                    if not await self._go_to_next_page(driver, page_num):
+                        break
+                    
+                    page_num += 1
+                    
+                    # Smithery için sadece ilk 3 sonuç
+                    if len(profiles) >= 3:
+                        break
+                    
+                    # Hızlı scraping için sadece ilk sayfa
+                    if page_num > 1:
+                        break
+                        
+                except Exception as e:
+                    logger.error(f"Sayfa işlenirken hata: {e}")
                     break
             
             logger.info(f"Scraping tamamlandı: {len(profiles)} profil bulundu")
@@ -248,6 +271,8 @@ class ProfileScraperTool:
             
         except Exception as e:
             logger.error(f"Scraping hatası: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return profiles
     
     async def _extract_profile_data(
