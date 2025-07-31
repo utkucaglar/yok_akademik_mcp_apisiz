@@ -27,6 +27,12 @@ class SeleniumManager:
         options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-plugins")
+        options.add_argument("--disable-images")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
         options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         
         # Performans optimizasyonları
@@ -37,10 +43,17 @@ class SeleniumManager:
         }
         options.add_experimental_option("prefs", prefs)
         
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
-        driver.set_window_size(1920, 1080)
+        try:
+            # Use latest ChromeDriver with version compatibility
+            service = Service(ChromeDriverManager(version="latest").install())
+            driver = webdriver.Chrome(service=service, options=options)
+        except Exception as e:
+            logger.warning(f"Latest ChromeDriver failed, trying stable version: {e}")
+            # Fallback to stable version
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
         
+        driver.set_window_size(1920, 1080)
         return driver
     
     @asynccontextmanager
