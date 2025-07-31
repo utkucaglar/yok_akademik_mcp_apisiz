@@ -144,18 +144,18 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
             result = await collaborator_scraper.get_collaborators(**arguments)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
-                    elif name == "get_session_status":
-                session_id = arguments["session_id"]
-                result = await profile_scraper.get_session_status(session_id)
-                return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
-            
-            elif name == "get_stream_updates":
-                session_id = arguments["session_id"]
-                result = await stream_manager.get_updates(session_id)
-                return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
-            
-            else:
-                raise ValueError(f"Unknown tool: {name}")
+        elif name == "get_session_status":
+            session_id = arguments["session_id"]
+            result = await profile_scraper.get_session_status(session_id)
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "get_stream_updates":
+            session_id = arguments["session_id"]
+            result = await stream_manager.get_updates(session_id)
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        else:
+            raise ValueError(f"Unknown tool: {name}")
     
     except Exception as e:
         logging.error(f"Error in tool {name}: {str(e)}")
