@@ -29,12 +29,20 @@ class FileManager:
             logger.error(f"Fields.json yüklenemedi: {e}")
             return []
     
-    def get_field_name_by_id(self, fields_data: List[Dict], field_id: int) -> Optional[str]:
+    def get_field_name_by_id(self, field_id: int) -> Optional[str]:
         """Field ID'ye göre alan adını bul"""
-        for field in fields_data:
-            if field['id'] == field_id:
-                return field['name']
-        return None
+        try:
+            # Fields verilerini senkron olarak yükle
+            with open(self.fields_path, 'r', encoding='utf-8') as f:
+                fields_data = json.load(f)
+            
+            for field in fields_data:
+                if field['id'] == field_id:
+                    return field['name']
+            return None
+        except Exception as e:
+            logger.error(f"Field name lookup failed: {e}")
+            return None
     
     def get_specialty_name_by_id(self, fields_data: List[Dict], field_id: int, specialty_id: int) -> Optional[str]:
         """Specialty ID'ye göre uzmanlık adını bul"""

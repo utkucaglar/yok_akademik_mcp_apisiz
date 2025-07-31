@@ -73,30 +73,53 @@ class SeleniumManager:
         chrome_version = self._get_chrome_version()
         logger.info(f"Detected Chrome version: {chrome_version}")
         
-        try:
-            # Selenium 4.16+ ile otomatik ChromeDriver kullan
-            driver = webdriver.Chrome(options=options)
-            logger.info("Successfully created driver with automatic ChromeDriver")
-        except Exception as e:
-            logger.warning(f"Automatic ChromeDriver failed: {e}")
+        # Basit timeout ile driver oluştur
+        import threading
+        import time
+        
+        driver = None
+        error = None
+        
+        def create_driver():
+            nonlocal driver, error
             try:
-                # Önce Chrome versiyonuna uygun ChromeDriver dene
-                service = Service(ChromeDriverManager(version=chrome_version).install())
-                driver = webdriver.Chrome(service=service, options=options)
-                logger.info(f"Successfully created driver with ChromeDriver for version {chrome_version}")
-            except Exception as e2:
-                logger.warning(f"ChromeDriver for version {chrome_version} failed: {e2}")
+                # Selenium 4.16+ ile otomatik ChromeDriver kullan
+                driver = webdriver.Chrome(options=options)
+                logger.info("Successfully created driver with automatic ChromeDriver")
+            except Exception as e:
+                logger.warning(f"Automatic ChromeDriver failed: {e}")
                 try:
-                    # Latest versiyonu dene
-                    service = Service(ChromeDriverManager(version="latest").install())
+                    # Önce Chrome versiyonuna uygun ChromeDriver dene
+                    service = Service(ChromeDriverManager(version=chrome_version).install())
                     driver = webdriver.Chrome(service=service, options=options)
-                    logger.info("Successfully created driver with latest ChromeDriver")
-                except Exception as e3:
-                    logger.warning(f"Latest ChromeDriver failed: {e3}")
-                    # Son çare olarak stable versiyon
-                    service = Service(ChromeDriverManager().install())
-                    driver = webdriver.Chrome(service=service, options=options)
-                    logger.info("Successfully created driver with stable ChromeDriver")
+                    logger.info(f"Successfully created driver with ChromeDriver for version {chrome_version}")
+                except Exception as e2:
+                    logger.warning(f"ChromeDriver for version {chrome_version} failed: {e2}")
+                    try:
+                        # Latest versiyonu dene
+                        service = Service(ChromeDriverManager(version="latest").install())
+                        driver = webdriver.Chrome(service=service, options=options)
+                        logger.info("Successfully created driver with latest ChromeDriver")
+                    except Exception as e3:
+                        logger.warning(f"Latest ChromeDriver failed: {e3}")
+                        # Son çare olarak stable versiyon
+                        service = Service(ChromeDriverManager().install())
+                        driver = webdriver.Chrome(service=service, options=options)
+                        logger.info("Successfully created driver with stable ChromeDriver")
+            except Exception as e:
+                error = e
+        
+        # Thread ile timeout
+        thread = threading.Thread(target=create_driver)
+        thread.daemon = True
+        thread.start()
+        thread.join(timeout=30)  # 30 saniye timeout
+        
+        if thread.is_alive():
+            raise TimeoutError("Driver creation timeout after 30 seconds")
+        
+        if error:
+            raise error
         
         driver.set_window_size(1920, 1080)
         return driver
