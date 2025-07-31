@@ -134,14 +134,17 @@ class ProfileScraperTool:
                 logger.info(f"Scraping tamamlandı: {len(profiles)} profil bulundu")
                 
                 # Sonuçları kaydet
-                await self.file_manager.save_profiles(session_id, profiles)
-                
-                # Sadece profil bulunduysa session'ı tamamlandı olarak işaretle
-                if len(profiles) > 0:
-                    await self.file_manager.mark_session_complete(session_id, "main")
+                save_success = await self.file_manager.save_profiles(session_id, profiles)
+                if save_success:
                     logger.info(f"Profil verileri kaydedildi: {len(profiles)} profil")
+                    # Sadece profil bulunduysa session'ı tamamlandı olarak işaretle
+                    if len(profiles) > 0:
+                        await self.file_manager.mark_session_complete(session_id, "main")
+                        logger.info("Session tamamlandı olarak işaretlendi")
+                    else:
+                        logger.warning("Hiç profil bulunamadı, session tamamlanmadı")
                 else:
-                    logger.warning("Hiç profil bulunamadı, session tamamlanmadı")
+                    logger.error("Profil verileri kaydedilemedi!")
                 
         except Exception as e:
             logger.error(f"Async scraping hatası: {e}")
@@ -215,11 +218,18 @@ class ProfileScraperTool:
                 
                 try:
                     # Önce tablo var mı kontrol et
-                    table = driver.find_element(By.CSS_SELECTOR, "table.table")
-                    logger.info("Tablo bulundu")
-                    
-                    profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
-                    logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
+                    try:
+                        table = driver.find_element(By.CSS_SELECTOR, "table.table")
+                        logger.info("Tablo bulundu")
+                    except:
+                        logger.warning("Tablo bulunamadı, farklı selector dene")
+                        # Farklı selector'ları dene
+                        profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr")
+                        profile_rows = [row for row in profile_rows if row.get_attribute("id") and row.get_attribute("id").startswith("authorInfo_")]
+                        logger.info(f"Alternatif yöntemle {len(profile_rows)} profil bulundu")
+                    else:
+                        profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
+                        logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
                     
                     if len(profile_rows) == 0:
                         logger.info("Profil bulunamadı, döngü bitiyor")
