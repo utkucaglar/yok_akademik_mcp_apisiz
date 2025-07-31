@@ -1,10 +1,16 @@
 import asyncio
 import json
 import logging
-import sys
 from typing import Any, Sequence, Dict
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
+
+# Mock class for compatibility
+class NotificationOptions:
+    def __init__(self, tools_changed=False, resources_changed=False, prompts_changed=False):
+        self.tools_changed = tools_changed
+        self.resources_changed = resources_changed
+        self.prompts_changed = prompts_changed
 from mcp.server.stdio import stdio_server
 from mcp.types import (
     Resource,
@@ -130,8 +136,6 @@ async def handle_list_tools() -> list[Tool]:
 async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextContent]:
     """Handle tool calls."""
     try:
-        logging.info(f"Tool call: {name} with arguments: {arguments}")
-        
         if name == "search_academic_profiles":
             result = await profile_scraper.search_profiles(**arguments)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
@@ -151,49 +155,33 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
         else:
-            error_msg = f"Unknown tool: {name}"
-            logging.error(error_msg)
-            return [TextContent(type="text", text=f"Error: {error_msg}")]
+            raise ValueError(f"Unknown tool: {name}")
     
     except Exception as e:
-        error_msg = f"Error in tool {name}: {str(e)}"
-        logging.error(error_msg)
-        return [TextContent(type="text", text=f"Error: {error_msg}")]
+        logging.error(f"Error in tool {name}: {str(e)}")
+        return [TextContent(type="text", text=f"Error: {str(e)}")]
 
 
 
 async def main():
     """Main server entry point."""
-    try:
-        logging.info("Starting YÖK Akademik Scraper MCP Server...")
-        
-        async with stdio_server() as (read_stream, write_stream):
-            logging.info("Server streams initialized")
-            
-            await server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name="yok-akademik-scraper",
-                    server_version="1.0.0",
-                    capabilities={
-                        "tools": {}
-                    }
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="yok-akademik-scraper",
+                server_version="1.0.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(
+                        tools_changed=False,
+                        resources_changed=False,
+                        prompts_changed=False
+                    ),
+                    experimental_capabilities={}
                 )
             )
-    except KeyboardInterrupt:
-        logging.info("Server interrupted by user")
-    except Exception as e:
-        logging.error(f"Server error: {e}")
-        import traceback
-        logging.error(f"Traceback: {traceback.format_exc()}")
-        sys.exit(1)
+        )
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Server stopped by user")
-    except Exception as e:
-        print(f"Fatal error: {e}")
-        sys.exit(1) 
+    asyncio.run(main()) 

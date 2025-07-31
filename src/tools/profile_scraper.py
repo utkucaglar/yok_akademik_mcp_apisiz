@@ -176,7 +176,8 @@ class ProfileScraperTool:
             
             # Arama kutusunu bekle
             logger.info("Arama kutusu bekleniyor...")
-            if not await self.selenium_manager.wait_for_element(driver, By.ID, "aramaTerim"):
+            search_box = await self.selenium_manager.wait_for_element(driver, By.ID, "aramaTerim")
+            if not search_box:
                 raise Exception("Arama kutusu bulunamadı")
             logger.info("Arama kutusu bulundu!")
             
@@ -194,84 +195,134 @@ class ProfileScraperTool:
             search_button.click()
             logger.info("Arama butonu tıklandı!")
             
-            # Sayfa yüklenmesini bekle
-            await asyncio.sleep(5)
-            logger.info("Arama sonuçları yüklendi")
-            
-            # Akademisyenler sekmesine geç
-            logger.info("Akademisyenler sekmesi aranıyor...")
+            # Hemen Akademisyenler sekmesini bekle ve tıkla
             try:
-                akademisyenler_link = driver.find_element(By.LINK_TEXT, "Akademisyenler")
+                akademisyenler_link = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.LINK_TEXT, "Akademisyenler"))
+                )
                 akademisyenler_link.click()
                 logger.info("Akademisyenler sekmesine geçildi")
-                await asyncio.sleep(3)
+                await asyncio.sleep(2)
             except Exception as e:
-                logger.warning(f"Akademisyenler sekmesi bulunamadı: {e}")
+                logger.error(f"Akademisyenler sekmesi bulunamadı: {e}")
                 # Sekme bulunamazsa devam et
             
             # Profil satırlarını topla
+            profiles = []
+            profile_urls = set()
+            page_num = 1
+            profile_id_counter = 1
             while True:
                 logger.info(f"{page_num}. sayfa yükleniyor...")
-                
-                # Sayfa yüklenmesini bekle
-                await asyncio.sleep(3)
-                
                 try:
-                    # Profil satırlarını bul
-                    profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
-                    logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
-                    
-                    if len(profile_rows) == 0:
-                        logger.info("Profil bulunamadı, döngü bitiyor")
-                        break
-                    
-                    for row in profile_rows:
-                        try:
-                            profile = await self._extract_profile_data(
-                                row, profile_id_counter, selected_field, selected_specialties
-                            )
-                            
-                            if profile:
-                                url = profile["url"]
-                                if url in profile_urls:
-                                    logger.info(f"Profil zaten eklenmiş: {url}")
-                                    continue
-                                
-                                profiles.append(profile)
-                                profile_urls.add(url)
-                                profile_id_counter += 1
-                                
-                                logger.info(f"Profil eklendi: {profile['name']} - {url}")
-                                
-                                # Email kontrolü
-                                if request.email and profile.get('email', '').lower() == request.email.lower():
-                                    logger.info(f"Email eşleşmesi bulundu: {profile['name']} - {profile['email']}")
-                                    return profiles
-                                
-                                # Limit kontrolü
-                                if len(profiles) >= request.max_results:
-                                    logger.info(f"Maksimum sonuç sayısına ulaşıldı: {len(profiles)}")
-                                    return profiles
-                        
-                        except Exception as e:
-                            logger.error(f"Profil satırı işlenemedi: {e}")
-                    
-                    # Sonraki sayfaya geç
-                    if not await self._go_to_next_page(driver, page_num):
-                        break
-                    
-                    page_num += 1
-                    
-                    # Smithery timeout'u önlemek için maksimum 5 sayfa
-                    if page_num > 5:
-                        logger.info(f"Smithery için 5 sayfa limitine ulaşıldı")
-                        break
-                        
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "tr[id^='authorInfo_']"))
+                    )
                 except Exception as e:
-                    logger.error(f"Sayfa işlenirken hata: {e}")
+                    logger.error(f"Profil satırları yüklenemedi: {e}")
                     break
-            
-            logger.info(f"Scraping tamamlandı: {len(profiles)} profil bulundu")
+                profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
+                logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
+                if len(profile_rows) == 0:
+                    logger.info("Profil bulunamadı, döngü bitiyor")
+                    break
+                for row in profile_rows:
+                    try:
+                        info_td = row.find_element(By.XPATH, "./td[h6]")
+                        all_links = info_td.find_elements(By.CSS_SELECTOR, 'a.anahtarKelime')
+                        green_label = all_links[0].text.strip() if len(all_links) > 0 else ''
+                        blue_label = all_links[1].text.strip() if len(all_links) > 1 else ''
+                        if selected_field and green_label != selected_field:
+                            continue
+                        if selected_specialties and blue_label not in selected_specialties:
+                            continue
+                        link = row.find_element(By.CSS_SELECTOR, "a")
+                        link_text = link.text.strip()
+                        url = link.get_attribute("href")
+                        if url in profile_urls:
+                            logger.info(f"Profil zaten eklenmiş: {url}")
+                            continue
+                        info = info_td.text.strip() if info_td else ""
+                        img = row.find_element(By.CSS_SELECTOR, "img")
+                        img_src = img.get_attribute("src") if img else None
+                        if not img_src:
+                            img_src = self.default_photo_url
+                        info_lines = info.splitlines()
+                        if len(info_lines) > 1:
+                            title = info_lines[0].strip()
+                            name = info_lines[1].strip()
+                        else:
+                            title = link_text
+                            name = link_text
+                        header = info_lines[2].strip() if len(info_lines) > 2 else ''
+                        label_text = f"{green_label}   {blue_label}"
+                        keywords_text = info_td.text.replace(label_text, '').strip()
+                        keywords_text = keywords_text.lstrip(';:,. \u000b\n\t')
+                        lines = [l.strip() for l in keywords_text.split('\n') if l.strip()]
+                        if lines:
+                            keywords_line = lines[-1]
+                            if header.strip() == keywords_line or header.strip() in keywords_line:
+                                keywords_str = ""
+                            else:
+                                keywords = [k.strip() for k in keywords_line.split(';') if k.strip()]
+                                keywords_str = " ; ".join(keywords) if keywords else ""
+                        else:
+                            keywords_str = ""
+                        email = ''
+                        try:
+                            email_link = row.find_element(By.CSS_SELECTOR, "a[href^='mailto']")
+                            email = email_link.text.strip().replace('[at]', '@')
+                        except Exception:
+                            email = ''
+                        profiles.append({
+                            "id": profile_id_counter,
+                            "name": name,
+                            "title": title,
+                            "url": url,
+                            "info": info,
+                            "photoUrl": img_src,
+                            "header": header,
+                            "green_label": green_label,
+                            "blue_label": blue_label,
+                            "keywords": keywords_str,
+                            "email": email
+                        })
+                        profile_id_counter += 1
+                        profile_urls.add(url)
+                        logger.info(f"Profil eklendi: {name} - {url}")
+                        # Streaming update
+                        if stream_manager:
+                            await stream_manager._send_update(session_id, {
+                                "type": "profiles",
+                                "session_id": session_id,
+                                "data": profiles,
+                                "count": len(profiles),
+                                "status": "profiles_updated"
+                            })
+                        if len(profiles) >= request.max_results:
+                            logger.info(f"Maksimum sonuç sayısına ulaşıldı: {len(profiles)}")
+                            return profiles
+                    except Exception as e:
+                        logger.error(f"Profil satırı işlenemedi: {e}")
+                # Pagination: aktif sayfa <li> elementinden sonra gelen <a>'ya tıkla
+                try:
+                    pagination = driver.find_element(By.CSS_SELECTOR, "ul.pagination")
+                    active_li = pagination.find_element(By.CSS_SELECTOR, "li.active")
+                    all_lis = pagination.find_elements(By.TAG_NAME, "li")
+                    active_index = all_lis.index(active_li)
+                    if active_index == len(all_lis) - 1:
+                        logger.info("Son sayfaya gelindi, döngü bitiyor.")
+                        break
+                    next_li = all_lis[active_index + 1]
+                    next_a = next_li.find_element(By.TAG_NAME, "a")
+                    logger.info(f"{page_num+1}. sayfaya geçiliyor...")
+                    next_a.click()
+                    page_num += 1
+                    WebDriverWait(driver, 10).until(EC.staleness_of(profile_rows[0]))
+                except Exception as e:
+                    logger.info(f"Sonraki sayfa bulunamadı veya tıklanamadı: {e}")
+                    break
+            logger.info(f"Toplam {len(profiles)} profil toplandı.")
             return profiles
             
         except Exception as e:

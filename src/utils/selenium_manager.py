@@ -103,15 +103,15 @@ class SeleniumManager:
             return False
     
     async def wait_for_element(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 3):
-        """Element için bekle"""
+        """Element için bekle ve element'i döndür"""
         try:
-            WebDriverWait(driver, timeout).until(
+            element = WebDriverWait(driver, timeout).until(
                 EC.presence_of_element_located((by, value))
             )
-            return True
+            return element
         except Exception as e:
             logger.error(f"Element bulunamadı {by}={value}: {e}")
-            return False
+            return None
     
     async def wait_for_clickable(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 3):
         """Tıklanabilir element için bekle"""
