@@ -1,5 +1,7 @@
 # YÖK Akademik Scraper MCP
 
+[![smithery badge](https://smithery.ai/badge/@utkucaglar/yok_akademik_mcp_apisiz)](https://smithery.ai/server/@utkucaglar/yok_akademik_mcp_apisiz)
+
 YÖK Akademik veri tabanından akademisyen profilleri ve işbirlikçilerini scrape eden MCP (Model Context Protocol) server.
 
 ## Özellikler
@@ -12,6 +14,15 @@ YÖK Akademik veri tabanından akademisyen profilleri ve işbirlikçilerini scra
 
 ## Kurulum
 
+### Smithery ile Kurulum
+
+[YÖK Akademik Scraper MCP](https://smithery.ai/server/@utkucaglar/yok_akademik_mcp_apisiz)'i Claude Desktop için otomatik olarak kurmak için [Smithery](https://smithery.ai/server/@utkucaglar/yok_akademik_mcp_apisiz) kullanın:
+
+```bash
+npx -y @smithery/cli install @utkucaglar/yok_akademik_mcp_apisiz --client claude
+```
+
+### Manual Kurulum
 ```bash
 pip install -r requirements.txt
 ```
