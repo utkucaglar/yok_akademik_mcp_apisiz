@@ -135,16 +135,19 @@ class ProfileScraperTool:
                 
                 # Sonuçları kaydet
                 await self.file_manager.save_profiles(session_id, profiles)
-                await self.file_manager.mark_session_complete(session_id, "main")
                 
-                logger.info(f"Profil verileri kaydedildi: {len(profiles)} profil")
+                # Sadece profil bulunduysa session'ı tamamlandı olarak işaretle
+                if len(profiles) > 0:
+                    await self.file_manager.mark_session_complete(session_id, "main")
+                    logger.info(f"Profil verileri kaydedildi: {len(profiles)} profil")
+                else:
+                    logger.warning("Hiç profil bulunamadı, session tamamlanmadı")
                 
         except Exception as e:
             logger.error(f"Async scraping hatası: {e}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-            # Hata durumunda session'ı işaretle ama boş liste kaydetme
-            await self.file_manager.mark_session_complete(session_id, "main")
+            # Hata durumunda session'ı işaretleme
     
     async def _scrape_profiles(
         self, 
