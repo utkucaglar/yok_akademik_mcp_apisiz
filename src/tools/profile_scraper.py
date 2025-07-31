@@ -125,19 +125,24 @@ class ProfileScraperTool:
         
         try:
             # Ana sayfaya git
+            logger.info("YÖK ana sayfasına gidiliyor...")
             await self.selenium_manager.navigate_to_page(driver, self.base_url + "AkademikArama/")
             
             # Arama kutusunu bekle
+            logger.info("Arama kutusu bekleniyor...")
             if not await self.selenium_manager.wait_for_element(driver, By.ID, "aramaTerim"):
                 raise Exception("Arama kutusu bulunamadı")
+            logger.info("Arama kutusu bulundu!")
             
             # Çerez onayını dene
             await self.selenium_manager.handle_cookies(driver)
             
             # Arama yap
+            logger.info(f"Arama yapılıyor: {request.name}")
             search_box = driver.find_element(By.ID, "aramaTerim")
             search_box.send_keys(request.name)
             driver.find_element(By.ID, "searchButton").click()
+            logger.info("Arama butonu tıklandı!")
             
             # Akademisyenler sekmesine geç
             if not await self.selenium_manager.wait_for_clickable(driver, By.LINK_TEXT, "Akademisyenler"):

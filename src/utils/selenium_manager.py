@@ -55,6 +55,10 @@ class SeleniumManager:
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-images")
+        options.add_argument("--disable-plugins")
+        options.add_argument("--disable-web-security")
+        options.add_argument("--allow-running-insecure-content")
+        options.add_argument("--disable-features=VizDisplayCompositor")
         
         # Performans optimizasyonları
         prefs = {
@@ -71,20 +75,20 @@ class SeleniumManager:
         logger.info("Starting driver creation...")
         
         try:
-            # Basit ChromeDriver yaklaşımı
-            logger.info("Trying automatic ChromeDriver...")
-            driver = webdriver.Chrome(options=options)
-            logger.info("Successfully created driver with automatic ChromeDriver")
+            # WebDriver Manager ile başla (daha güvenilir)
+            logger.info("Trying ChromeDriverManager...")
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
+            logger.info("Successfully created driver with ChromeDriverManager")
         except Exception as e:
-            logger.warning(f"Automatic ChromeDriver failed: {e}")
+            logger.warning(f"ChromeDriverManager failed: {e}")
             try:
-                # WebDriver Manager ile
-                logger.info("Trying ChromeDriverManager...")
-                service = Service(ChromeDriverManager().install())
-                driver = webdriver.Chrome(service=service, options=options)
-                logger.info("Successfully created driver with ChromeDriverManager")
+                # Basit ChromeDriver yaklaşımı
+                logger.info("Trying automatic ChromeDriver...")
+                driver = webdriver.Chrome(options=options)
+                logger.info("Successfully created driver with automatic ChromeDriver")
             except Exception as e2:
-                logger.warning(f"ChromeDriverManager failed: {e2}")
+                logger.warning(f"Automatic ChromeDriver failed: {e2}")
                 # Son çare - service olmadan
                 logger.info("Trying without service...")
                 driver = webdriver.Chrome(options=options)
@@ -105,17 +109,17 @@ class SeleniumManager:
             except Exception as e:
                 logger.warning(f"Driver kapatılırken hata: {e}")
     
-    async def navigate_to_page(self, driver: webdriver.Chrome, url: str, timeout: int = 10):
+    async def navigate_to_page(self, driver: webdriver.Chrome, url: str, timeout: int = 30):
         """Sayfaya git ve yüklenmeyi bekle"""
         try:
             driver.get(url)
-            await asyncio.sleep(2)  # Sayfa yüklenme beklemesi
+            await asyncio.sleep(5)  # Sayfa yüklenme beklemesi artırıldı
             return True
         except Exception as e:
             logger.error(f"Sayfa yüklenemedi {url}: {e}")
             return False
     
-    async def wait_for_element(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 10):
+    async def wait_for_element(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 30):
         """Element için bekle"""
         try:
             WebDriverWait(driver, timeout).until(
@@ -126,7 +130,7 @@ class SeleniumManager:
             logger.error(f"Element bulunamadı {by}={value}: {e}")
             return False
     
-    async def wait_for_clickable(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 10):
+    async def wait_for_clickable(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 30):
         """Tıklanabilir element için bekle"""
         try:
             WebDriverWait(driver, timeout).until(
