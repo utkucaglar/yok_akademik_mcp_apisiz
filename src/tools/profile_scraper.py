@@ -195,7 +195,7 @@ class ProfileScraperTool:
             logger.info("Arama butonu tıklandı!")
             
             # Sayfa yüklenmesini bekle
-            await asyncio.sleep(3)
+            await asyncio.sleep(5)
             logger.info("Arama sonuçları yüklendi")
             
             # Akademisyenler sekmesine geç
@@ -204,7 +204,7 @@ class ProfileScraperTool:
                 akademisyenler_link = driver.find_element(By.LINK_TEXT, "Akademisyenler")
                 akademisyenler_link.click()
                 logger.info("Akademisyenler sekmesine geçildi")
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
             except Exception as e:
                 logger.warning(f"Akademisyenler sekmesi bulunamadı: {e}")
                 # Sekme bulunamazsa devam et
@@ -217,19 +217,9 @@ class ProfileScraperTool:
                 await asyncio.sleep(3)
                 
                 try:
-                    # Önce tablo var mı kontrol et
-                    try:
-                        table = driver.find_element(By.CSS_SELECTOR, "table.table")
-                        logger.info("Tablo bulundu")
-                    except:
-                        logger.warning("Tablo bulunamadı, farklı selector dene")
-                        # Farklı selector'ları dene
-                        profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr")
-                        profile_rows = [row for row in profile_rows if row.get_attribute("id") and row.get_attribute("id").startswith("authorInfo_")]
-                        logger.info(f"Alternatif yöntemle {len(profile_rows)} profil bulundu")
-                    else:
-                        profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
-                        logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
+                    # Profil satırlarını bul
+                    profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
+                    logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
                     
                     if len(profile_rows) == 0:
                         logger.info("Profil bulunamadı, döngü bitiyor")

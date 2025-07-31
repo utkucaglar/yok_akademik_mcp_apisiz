@@ -54,35 +54,25 @@ class SeleniumManager:
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-extensions")
-        options.add_argument("--disable-images")
-        options.add_argument("--disable-plugins")
         options.add_argument("--disable-web-security")
         options.add_argument("--allow-running-insecure-content")
         options.add_argument("--disable-features=VizDisplayCompositor")
         options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_argument("--disable-javascript")
-        options.add_argument("--disable-css")
-        options.add_argument("--disable-animations")
-        options.add_argument("--disable-background-timer-throttling")
-        options.add_argument("--disable-backgrounding-occluded-windows")
-        options.add_argument("--disable-renderer-backgrounding")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         
-        # Performans optimizasyonları
+        # Performans optimizasyonları - JavaScript'i devre dışı bırakma
         prefs = {
             "profile.managed_default_content_settings.images": 2,
-            "profile.managed_default_content_settings.stylesheets": 2,
-            "profile.managed_default_content_settings.fonts": 2,
         }
         options.add_experimental_option("prefs", prefs)
         
-        logger.info("Creating Chrome driver with minimal approach...")
+        logger.info("Creating Chrome driver...")
         
-        # En basit yaklaşım - sadece options ile
         try:
             driver = webdriver.Chrome(options=options)
-            logger.info("Successfully created driver with minimal approach")
+            logger.info("Successfully created driver")
         except Exception as e:
             logger.error(f"Driver creation failed: {e}")
             raise e
