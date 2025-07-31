@@ -11,6 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from ..models.schemas import SearchRequest, AcademicProfile, SessionStatus
 from ..utils.selenium_manager import SeleniumManager
 from ..utils.file_manager import FileManager
+from ..utils.stream_manager import stream_manager
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class ProfileScraperTool:
         return green_label, blue_label, keywords
     
     async def search_profiles(self, **kwargs) -> Dict[str, Any]:
-        """Akademisyen profillerini ara - Fast version"""
+        """Akademisyen profillerini ara - Stream version"""
         try:
             logger.info(f"Search profiles başlatıldı: {kwargs}")
             # Request'i doğrula
@@ -56,6 +57,9 @@ class ProfileScraperTool:
             # Session ID oluştur
             session_id = self._generate_session_id()
             logger.info(f"Yeni session başlatıldı: {session_id}")
+            
+            # Stream başlat
+            await stream_manager.start_streaming(session_id, self._stream_callback)
             
             # Fields verilerini yükle
             fields_data = await self.file_manager.load_fields()
@@ -84,23 +88,15 @@ class ProfileScraperTool:
                     else:
                         logger.warning(f"Uzmanlık ID {specialty_id} bulunamadı!")
             
-            # WebDriver ile scraping başlat (synchronous)
-            logger.info("WebDriver oluşturuluyor...")
-            async with self.selenium_manager.get_driver() as driver:
-                logger.info("WebDriver başarıyla oluşturuldu, scraping başlıyor...")
-                profiles = await self._scrape_profiles(
-                    driver, request, session_id, selected_field, selected_specialties
-                )
-                
-                # Sonuçları kaydet
-                await self.file_manager.save_profiles(session_id, profiles)
-                await self.file_manager.mark_session_complete(session_id, "main")
-                
-                return {
+            # Background task olarak scraping başlat
+            asyncio.create_task(self._async_scrape_profiles(
+                request, session_id, selected_field, selected_specialties
+            ))
+            
+                            return {
                     "session_id": session_id,
-                    "profiles": profiles,
-                    "total_count": len(profiles),
-                    "status": "completed"
+                    "status": "streaming",
+                    "message": "Scraping başlatıldı, sonuçlar stream olarak gelecek"
                 }
                 
         except Exception as e:

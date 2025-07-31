@@ -22,6 +22,7 @@ from mcp.types import (
 
 from .tools.profile_scraper import ProfileScraperTool
 from .tools.collaborator_scraper import CollaboratorScraperTool
+from .utils.stream_manager import stream_manager
 
 
 # Logging konfigürasyonu
@@ -114,6 +115,20 @@ async def handle_list_tools() -> list[Tool]:
                 "required": ["session_id"]
             }
         ),
+        Tool(
+            name="get_stream_updates",
+            description="Stream güncellemelerini alır",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Session ID"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
 
     ]
 
@@ -129,13 +144,18 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
             result = await collaborator_scraper.get_collaborators(**arguments)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
-        elif name == "get_session_status":
-            session_id = arguments["session_id"]
-            result = await profile_scraper.get_session_status(session_id)
-            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
-        
-        else:
-            raise ValueError(f"Unknown tool: {name}")
+                    elif name == "get_session_status":
+                session_id = arguments["session_id"]
+                result = await profile_scraper.get_session_status(session_id)
+                return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+            
+            elif name == "get_stream_updates":
+                session_id = arguments["session_id"]
+                result = await stream_manager.get_updates(session_id)
+                return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+            
+            else:
+                raise ValueError(f"Unknown tool: {name}")
     
     except Exception as e:
         logging.error(f"Error in tool {name}: {str(e)}")
