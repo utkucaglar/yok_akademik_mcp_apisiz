@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Any, Sequence
+from typing import Any, Sequence, Dict
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
 
@@ -141,7 +141,7 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
             if result.get("status") == "streaming":
                 session_id = result["session_id"]
                 # Stream callback'i ayarla
-                await stream_manager.start_streaming(session_id, lambda msg: self._send_stream_update(msg))
+                await stream_manager.start_streaming(session_id, lambda msg: _send_stream_update(msg))
                 
                 return [TextContent(type="text", text=json.dumps({
                     "session_id": session_id,
@@ -185,7 +185,7 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
         logging.error(f"Error in tool {name}: {str(e)}")
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
-async def _send_stream_update(self, message: Dict[str, Any]):
+async def _send_stream_update(message: Dict[str, Any]):
     """Stream update gönder"""
     try:
         # Bu fonksiyon MCP client'a real-time updates gönderecek
