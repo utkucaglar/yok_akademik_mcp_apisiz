@@ -149,6 +149,8 @@ class FileManager:
     
     async def get_session_status(self, session_id: str) -> Dict[str, Any]:
         """Session durumunu kontrol et"""
+        # Clean session_id to remove any whitespace or newline characters
+        session_id = session_id.strip()
         session_dir = self.get_session_dir(session_id)
         
         if not session_dir.exists():

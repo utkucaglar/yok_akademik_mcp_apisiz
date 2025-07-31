@@ -7,6 +7,8 @@ from typing import List, Dict, Any, Optional
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import random
+import string
 
 from ..models.schemas import SearchRequest, AcademicProfile, SessionStatus
 from ..utils.selenium_manager import SeleniumManager
@@ -28,8 +30,10 @@ class ProfileScraperTool:
     def _generate_session_id(self) -> str:
         """Benzersiz session ID oluştur"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        unique_id = str(uuid.uuid4())[:8]
-        return f"session_{timestamp}_{unique_id}"
+        random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+        session_id = f"session_{timestamp}_{random_suffix}"
+        # Clean the session ID to remove any whitespace or newline characters
+        return session_id.strip()
     
     def _parse_labels_and_keywords(self, line: str) -> tuple[str, str, List[str]]:
         """Label ve keyword'leri ayır"""

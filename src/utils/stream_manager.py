@@ -129,8 +129,35 @@ class StreamManager:
             except Exception as e:
                 logger.error(f"Callback error for {session_id}: {e}")
     
+    async def update_session_status(self, session_id: str, status: str, data: Optional[Dict[str, Any]] = None):
+        """Update session status and save to file"""
+        try:
+            session_dir = Path(f"data/sessions/{session_id}")
+            session_dir.mkdir(parents=True, exist_ok=True)
+            
+            status_data = {
+                "session_id": session_id,
+                "status": status,
+                "timestamp": time.time()
+            }
+            
+            if data:
+                status_data.update(data)
+            
+            # Save status to file
+            status_file = session_dir / "status.json"
+            async with aiofiles.open(status_file, 'w', encoding='utf-8') as f:
+                await f.write(json.dumps(status_data, ensure_ascii=False, indent=2))
+            
+            logger.info(f"Session {session_id} status updated to: {status}")
+            
+        except Exception as e:
+            logger.error(f"Error updating session status: {e}")
+    
     async def get_updates(self, session_id: str) -> Dict[str, Any]:
         """Get latest updates for session"""
+        # Clean session_id to remove any whitespace or newline characters
+        session_id = session_id.strip()
         session_dir = Path(f"data/sessions/{session_id}")
         main_file = session_dir / "main_profile.json"
         

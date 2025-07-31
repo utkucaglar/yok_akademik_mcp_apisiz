@@ -145,12 +145,12 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
         elif name == "get_session_status":
-            session_id = arguments["session_id"]
+            session_id = arguments["session_id"].strip()
             result = await profile_scraper.get_session_status(session_id)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
         elif name == "get_stream_updates":
-            session_id = arguments["session_id"]
+            session_id = arguments["session_id"].strip()
             result = await stream_manager.get_updates(session_id)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
