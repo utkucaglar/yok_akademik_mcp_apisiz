@@ -8,6 +8,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+import subprocess
+import os
 from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
@@ -20,6 +22,30 @@ class SeleniumManager:
         self._driver_pool = []
         self._max_pool_size = 3
         
+    def _get_chrome_version(self) -> str:
+        """Chrome versiyonunu al"""
+        try:
+            # Linux'ta Chrome versiyonunu al
+            result = subprocess.run(['google-chrome', '--version'], 
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                version = result.stdout.strip().split()[-1]
+                return version
+        except Exception:
+            pass
+        
+        try:
+            # Chromium versiyonunu al
+            result = subprocess.run(['chromium', '--version'], 
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                version = result.stdout.strip().split()[-1]
+                return version
+        except Exception:
+            pass
+        
+        return "latest"  # Fallback
+    
     def _create_driver(self) -> webdriver.Chrome:
         """Yeni Chrome WebDriver oluştur"""
         options = Options()
@@ -43,15 +69,34 @@ class SeleniumManager:
         }
         options.add_experimental_option("prefs", prefs)
         
+        # Chrome versiyonunu al ve uyumlu ChromeDriver kullan
+        chrome_version = self._get_chrome_version()
+        logger.info(f"Detected Chrome version: {chrome_version}")
+        
         try:
-            # Use latest ChromeDriver with version compatibility
-            service = Service(ChromeDriverManager(version="latest").install())
-            driver = webdriver.Chrome(service=service, options=options)
+            # Selenium 4.16+ ile otomatik ChromeDriver kullan
+            driver = webdriver.Chrome(options=options)
+            logger.info("Successfully created driver with automatic ChromeDriver")
         except Exception as e:
-            logger.warning(f"Latest ChromeDriver failed, trying stable version: {e}")
-            # Fallback to stable version
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=options)
+            logger.warning(f"Automatic ChromeDriver failed: {e}")
+            try:
+                # Önce Chrome versiyonuna uygun ChromeDriver dene
+                service = Service(ChromeDriverManager(version=chrome_version).install())
+                driver = webdriver.Chrome(service=service, options=options)
+                logger.info(f"Successfully created driver with ChromeDriver for version {chrome_version}")
+            except Exception as e2:
+                logger.warning(f"ChromeDriver for version {chrome_version} failed: {e2}")
+                try:
+                    # Latest versiyonu dene
+                    service = Service(ChromeDriverManager(version="latest").install())
+                    driver = webdriver.Chrome(service=service, options=options)
+                    logger.info("Successfully created driver with latest ChromeDriver")
+                except Exception as e3:
+                    logger.warning(f"Latest ChromeDriver failed: {e3}")
+                    # Son çare olarak stable versiyon
+                    service = Service(ChromeDriverManager().install())
+                    driver = webdriver.Chrome(service=service, options=options)
+                    logger.info("Successfully created driver with stable ChromeDriver")
         
         driver.set_window_size(1920, 1080)
         return driver
