@@ -254,9 +254,9 @@ class ProfileScraperTool:
                     
                     page_num += 1
                     
-                    # Smithery timeout'u önlemek için maksimum 10 sayfa
-                    if page_num > 10:
-                        logger.info(f"Smithery için 10 sayfa limitine ulaşıldı")
+                    # Smithery timeout'u önlemek için maksimum 5 sayfa
+                    if page_num > 5:
+                        logger.info(f"Smithery için 5 sayfa limitine ulaşıldı")
                         break
                         
                 except Exception as e:
