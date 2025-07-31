@@ -143,8 +143,7 @@ class ProfileScraperTool:
             logger.error(f"Async scraping hatası: {e}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-            # Hata durumunda boş profil listesi kaydet
-            await self.file_manager.save_profiles(session_id, [])
+            # Hata durumunda session'ı işaretle ama boş liste kaydetme
             await self.file_manager.mark_session_complete(session_id, "main")
     
     async def _scrape_profiles(
@@ -190,7 +189,8 @@ class ProfileScraperTool:
             logger.info("Arama butonu tıklandı!")
             
             # Sayfa yüklenmesini bekle
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
+            logger.info("Arama sonuçları yüklendi")
             
             # Akademisyenler sekmesine geç
             logger.info("Akademisyenler sekmesi aranıyor...")
@@ -198,6 +198,7 @@ class ProfileScraperTool:
                 akademisyenler_link = driver.find_element(By.LINK_TEXT, "Akademisyenler")
                 akademisyenler_link.click()
                 logger.info("Akademisyenler sekmesine geçildi")
+                await asyncio.sleep(2)
             except Exception as e:
                 logger.warning(f"Akademisyenler sekmesi bulunamadı: {e}")
                 # Sekme bulunamazsa devam et
@@ -207,9 +208,13 @@ class ProfileScraperTool:
                 logger.info(f"{page_num}. sayfa yükleniyor...")
                 
                 # Sayfa yüklenmesini bekle
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
                 
                 try:
+                    # Önce tablo var mı kontrol et
+                    table = driver.find_element(By.CSS_SELECTOR, "table.table")
+                    logger.info("Tablo bulundu")
+                    
                     profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
                     logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
                     
