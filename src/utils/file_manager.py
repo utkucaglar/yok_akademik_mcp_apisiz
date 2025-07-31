@@ -59,14 +59,25 @@ class FileManager:
     
     async def create_session_dir(self, session_id: str) -> Path:
         """Session dizinini oluştur"""
-        session_dir = self.get_session_dir(session_id)
-        session_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Session klasörü oluşturuldu: {session_dir}")
-        return session_dir
+        try:
+            session_dir = self.get_session_dir(session_id)
+            # Dizin yoksa oluştur
+            if not session_dir.exists():
+                session_dir.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Session klasörü oluşturuldu: {session_dir}")
+            else:
+                logger.info(f"Session klasörü zaten mevcut: {session_dir}")
+            return session_dir
+        except Exception as e:
+            logger.error(f"Session klasörü oluşturulamadı: {e}")
+            # Hata durumunda base path'i döndür
+            return self.sessions_path
     
     async def save_profiles(self, session_id: str, profiles: List[Dict[str, Any]]) -> bool:
         """Profil verilerini kaydet"""
         try:
+            logger.info(f"Profil verileri kaydediliyor: {session_id}, {len(profiles)} profil")
+            
             session_dir = await self.create_session_dir(session_id)
             profile_file = session_dir / "main_profile.json"
             
@@ -77,13 +88,16 @@ class FileManager:
                 "total_count": len(profiles)
             }
             
+            # Dosya yazma işlemi
             async with aiofiles.open(profile_file, 'w', encoding='utf-8') as f:
                 await f.write(json.dumps(data, ensure_ascii=False, indent=2))
             
-            logger.info(f"Profil verileri kaydedildi: {len(profiles)} profil")
+            logger.info(f"Profil verileri başarıyla kaydedildi: {profile_file}")
             return True
         except Exception as e:
             logger.error(f"Profil verileri kaydedilemedi: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return False
     
     async def save_collaborators(self, session_id: str, collaborators: List[Dict[str, Any]]) -> bool:
