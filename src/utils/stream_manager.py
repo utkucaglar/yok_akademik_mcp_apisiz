@@ -21,6 +21,7 @@ class StreamManager:
     def __init__(self):
         self.active_streams: Dict[str, asyncio.Task] = {}
         self.callbacks: Dict[str, Callable] = {}
+        self.file_cache: Dict[str, str] = {}  # Cache for file contents
         self.observer = None
         
     async def start_streaming(self, session_id: str, callback: Callable):
@@ -63,30 +64,41 @@ class StreamManager:
             while True:
                 await asyncio.sleep(1)  # Check every second
                 
+                # Debug: Log file status
+                logger.info(f"Checking files for session {session_id}: main_file={main_file.exists()}, collab_file={collaborators_file.exists()}")
+                
                 # Check main profiles
                 if main_file.exists():
                     try:
                         async with aiofiles.open(main_file, 'r', encoding='utf-8') as f:
                             content = await f.read()
+                            
+                        # Check if file content has changed
+                        cache_key = f"{session_id}_main"
+                        if cache_key not in self.file_cache or self.file_cache[cache_key] != content:
+                            logger.info(f"File content changed for {session_id}, sending update")
+                            self.file_cache[cache_key] = content
                             data = json.loads(content)
                             
-                        await self._send_update(session_id, {
-                            "type": "profiles",
-                            "session_id": session_id,
-                            "data": data,
-                            "count": len(data.get("profiles", [])),
-                            "status": "profiles_updated"
-                        })
-                        
-                        # If completed, stop streaming
-                        if data.get("status") == "completed":
                             await self._send_update(session_id, {
-                                "type": "completed",
+                                "type": "profiles",
                                 "session_id": session_id,
-                                "status": "completed",
-                                "message": "Scraping tamamlandı!"
+                                "data": data,
+                                "count": len(data.get("profiles", [])),
+                                "status": "profiles_updated"
                             })
-                            break
+                            
+                            # If completed, stop streaming
+                            if data.get("status") == "completed":
+                                await self._send_update(session_id, {
+                                    "type": "completed",
+                                    "session_id": session_id,
+                                    "status": "completed",
+                                    "message": "Scraping tamamlandı!"
+                                })
+                                break
+                        else:
+                            logger.info(f"No file content change for {session_id}")
                             
                     except Exception as e:
                         logger.error(f"Error reading main file: {e}")
@@ -96,15 +108,20 @@ class StreamManager:
                     try:
                         async with aiofiles.open(collaborators_file, 'r', encoding='utf-8') as f:
                             content = await f.read()
+                            
+                        # Check if file content has changed
+                        cache_key = f"{session_id}_collaborators"
+                        if cache_key not in self.file_cache or self.file_cache[cache_key] != content:
+                            self.file_cache[cache_key] = content
                             data = json.loads(content)
                             
-                        await self._send_update(session_id, {
-                            "type": "collaborators",
-                            "session_id": session_id,
-                            "data": data,
-                            "status": "collaborators_updated"
-                        })
-                        
+                            await self._send_update(session_id, {
+                                "type": "collaborators",
+                                "session_id": session_id,
+                                "data": data,
+                                "status": "collaborators_updated"
+                            })
+                            
                     except Exception as e:
                         logger.error(f"Error reading collaborators file: {e}")
                         
