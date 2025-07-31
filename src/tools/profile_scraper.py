@@ -239,8 +239,8 @@ class ProfileScraperTool:
                 
                 page_num += 1
                 
-                # Çok hızlı scraping için sadece ilk 5 sonuç
-                if len(profiles) >= 5:
+                # Smithery için sadece ilk 3 sonuç
+                if len(profiles) >= 3:
                     break
                 
                 # Hızlı scraping için sadece ilk sayfa
