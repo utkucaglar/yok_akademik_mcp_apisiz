@@ -1,5 +1,7 @@
 # YÖK Akademik Scraper MCP
 
+[![smithery badge](https://smithery.ai/badge/@utkucaglar/yok_akademik_mcp_apisiz)](https://smithery.ai/server/@utkucaglar/yok_akademik_mcp_apisiz)
+
 YÖK Akademik veri tabanından akademisyen profilleri ve işbirlikçilerini scrape eden MCP (Model Context Protocol) server.
 
 ## Özellikler
@@ -12,6 +14,15 @@ YÖK Akademik veri tabanından akademisyen profilleri ve işbirlikçilerini scra
 
 ## Kurulum
 
+### Installing via Smithery
+
+To install yok_akademik_mcp_apisiz for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@utkucaglar/yok_akademik_mcp_apisiz):
+
+```bash
+npx -y @smithery/cli install @utkucaglar/yok_akademik_mcp_apisiz --client claude
+```
+
+### Manual Installation
 ```bash
 pip install -r requirements.txt
 ```
@@ -93,4 +104,4 @@ MIT License
 2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
 3. Commit edin (`git commit -m 'Add amazing feature'`)
 4. Push edin (`git push origin feature/amazing-feature`)
-5. Pull Request açın 
+5. Pull Request açın
