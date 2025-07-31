@@ -60,6 +60,12 @@ class SeleniumManager:
         options.add_argument("--allow-running-insecure-content")
         options.add_argument("--disable-features=VizDisplayCompositor")
         options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-javascript")
+        options.add_argument("--disable-css")
+        options.add_argument("--disable-animations")
+        options.add_argument("--disable-background-timer-throttling")
+        options.add_argument("--disable-backgrounding-occluded-windows")
+        options.add_argument("--disable-renderer-backgrounding")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
         
@@ -96,17 +102,17 @@ class SeleniumManager:
             except Exception as e:
                 logger.warning(f"Driver kapatılırken hata: {e}")
     
-    async def navigate_to_page(self, driver: webdriver.Chrome, url: str, timeout: int = 30):
+    async def navigate_to_page(self, driver: webdriver.Chrome, url: str, timeout: int = 15):
         """Sayfaya git ve yüklenmeyi bekle"""
         try:
             driver.get(url)
-            await asyncio.sleep(3)  # Sayfa yüklenme beklemesi kısaltıldı
+            await asyncio.sleep(1)  # Sayfa yüklenme beklemesi çok kısaltıldı
             return True
         except Exception as e:
             logger.error(f"Sayfa yüklenemedi {url}: {e}")
             return False
     
-    async def wait_for_element(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 15):
+    async def wait_for_element(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 5):
         """Element için bekle"""
         try:
             WebDriverWait(driver, timeout).until(
@@ -117,7 +123,7 @@ class SeleniumManager:
             logger.error(f"Element bulunamadı {by}={value}: {e}")
             return False
     
-    async def wait_for_clickable(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 15):
+    async def wait_for_clickable(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 5):
         """Tıklanabilir element için bekle"""
         try:
             WebDriverWait(driver, timeout).until(

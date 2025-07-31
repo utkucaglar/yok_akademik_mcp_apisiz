@@ -239,6 +239,10 @@ class ProfileScraperTool:
                 
                 page_num += 1
                 
+                # Çok hızlı scraping için sadece ilk 5 sonuç
+                if len(profiles) >= 5:
+                    break
+                
                 # Hızlı scraping için sadece ilk sayfa
                 if page_num > 1:
                     break
