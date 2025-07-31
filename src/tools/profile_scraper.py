@@ -119,13 +119,12 @@ class ProfileScraperTool:
                                    selected_field: Optional[str], selected_specialties: List[str]):
         """Async scraping işlemi"""
         try:
-            await stream_manager.update_session_status(session_id, "scraping_started")
+            logger.info(f"Async scraping başlatıldı: {session_id}")
             
             # WebDriver ile scraping başlat
             logger.info("WebDriver oluşturuluyor...")
             async with self.selenium_manager.get_driver() as driver:
                 logger.info("WebDriver başarıyla oluşturuldu, scraping başlıyor...")
-                await stream_manager.update_session_status(session_id, "driver_ready")
                 
                 profiles = await self._scrape_profiles(
                     driver, request, session_id, selected_field, selected_specialties
@@ -135,16 +134,13 @@ class ProfileScraperTool:
                 await self.file_manager.save_profiles(session_id, profiles)
                 await self.file_manager.mark_session_complete(session_id, "main")
                 
-                await stream_manager.update_session_status(session_id, "completed", {
-                    "total_count": len(profiles),
-                    "profiles": profiles
-                })
+                logger.info(f"Scraping tamamlandı: {len(profiles)} profil bulundu")
                 
         except Exception as e:
             logger.error(f"Async scraping hatası: {e}")
-            await stream_manager.update_session_status(session_id, "failed", {
-                "error": str(e)
-            })
+            # Hata durumunda boş profil listesi kaydet
+            await self.file_manager.save_profiles(session_id, [])
+            await self.file_manager.mark_session_complete(session_id, "main")
     
     async def _scrape_profiles(
         self, 
@@ -247,6 +243,7 @@ class ProfileScraperTool:
                 if page_num > 1:
                     break
             
+            logger.info(f"Scraping tamamlandı: {len(profiles)} profil bulundu")
             return profiles
             
         except Exception as e:
