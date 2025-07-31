@@ -22,7 +22,7 @@ from mcp.types import (
 
 from .tools.profile_scraper import ProfileScraperTool
 from .tools.collaborator_scraper import CollaboratorScraperTool
-from .utils.stream_manager import stream_manager
+
 
 # Logging konfigürasyonu
 logging.basicConfig(
@@ -114,20 +114,7 @@ async def handle_list_tools() -> list[Tool]:
                 "required": ["session_id"]
             }
         ),
-        Tool(
-            name="get_stream_updates",
-            description="Real-time stream updates alır",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "session_id": {
-                        "type": "string",
-                        "description": "Session ID"
-                    }
-                },
-                "required": ["session_id"]
-            }
-        )
+
     ]
 
 @server.call_tool()
@@ -144,25 +131,8 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
         
         elif name == "get_session_status":
             session_id = arguments["session_id"]
-            # Stream manager'dan status al
-            stream_status = stream_manager.get_session_status(session_id)
-            if stream_status:
-                return [TextContent(type="text", text=json.dumps(stream_status, ensure_ascii=False, indent=2))]
-            else:
-                # Fallback to file-based status
-                result = await profile_scraper.get_session_status(session_id)
-                return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
-        
-        elif name == "get_stream_updates":
-            session_id = arguments["session_id"]
-            status = stream_manager.get_session_status(session_id)
-            if status:
-                return [TextContent(type="text", text=json.dumps(status, ensure_ascii=False, indent=2))]
-            else:
-                return [TextContent(type="text", text=json.dumps({
-                    "error": "Session not found",
-                    "session_id": session_id
-                }, ensure_ascii=False, indent=2))]
+            result = await profile_scraper.get_session_status(session_id)
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
         else:
             raise ValueError(f"Unknown tool: {name}")
@@ -171,15 +141,7 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
         logging.error(f"Error in tool {name}: {str(e)}")
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
-async def _send_stream_update(message: Dict[str, Any]):
-    """Stream update gönder"""
-    try:
-        # Bu fonksiyon MCP client'a real-time updates gönderecek
-        update_text = json.dumps(message, ensure_ascii=False, indent=2)
-        logging.info(f"Stream update: {update_text}")
-        # TODO: Implement MCP notification system
-    except Exception as e:
-        logging.error(f"Stream update error: {e}")
+
 
 async def main():
     """Main server entry point."""

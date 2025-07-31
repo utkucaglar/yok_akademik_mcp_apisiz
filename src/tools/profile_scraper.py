@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from ..models.schemas import SearchRequest, AcademicProfile, SessionStatus
 from ..utils.selenium_manager import SeleniumManager
 from ..utils.file_manager import FileManager
-from ..utils.stream_manager import stream_manager
+
 
 logger = logging.getLogger(__name__)
 
