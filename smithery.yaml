@@ -1,4 +1,0 @@
-version: 1
-start:
-  command: ["python", "-m", "src.server"]
-  port: 8000 
