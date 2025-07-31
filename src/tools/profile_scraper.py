@@ -48,6 +48,7 @@ class ProfileScraperTool:
     async def search_profiles(self, **kwargs) -> Dict[str, Any]:
         """Akademisyen profillerini ara"""
         try:
+            logger.info(f"Search profiles başlatıldı: {kwargs}")
             # Request'i doğrula
             request = SearchRequest(**kwargs)
             
@@ -63,7 +64,7 @@ class ProfileScraperTool:
             selected_specialties = []
             
             if request.field_id:
-                field_name = self.file_manager.get_field_name_by_id(fields_data, request.field_id)
+                field_name = self.file_manager.get_field_name_by_id(request.field_id)
                 if field_name:
                     selected_field = field_name
                     logger.info(f"Alan ID {request.field_id} -> '{field_name}' olarak ayarlandı")
@@ -83,7 +84,9 @@ class ProfileScraperTool:
                         logger.warning(f"Uzmanlık ID {specialty_id} bulunamadı!")
             
             # WebDriver ile scraping başlat
+            logger.info("WebDriver oluşturuluyor...")
             async with self.selenium_manager.get_driver() as driver:
+                logger.info("WebDriver başarıyla oluşturuldu, scraping başlıyor...")
                 profiles = await self._scrape_profiles(
                     driver, request, session_id, selected_field, selected_specialties
                 )

@@ -67,45 +67,28 @@ class SeleniumManager:
         # Chrome versiyon algılama kısmını atla
         logger.info("Using simplified ChromeDriver approach")
         
-        # Basit timeout ile driver oluştur
-        import threading
-        import time
+        # Debug ile driver oluştur
+        logger.info("Starting driver creation...")
         
-        driver = None
-        error = None
-        
-        def create_driver():
-            nonlocal driver, error
+        try:
+            # Basit ChromeDriver yaklaşımı
+            logger.info("Trying automatic ChromeDriver...")
+            driver = webdriver.Chrome(options=options)
+            logger.info("Successfully created driver with automatic ChromeDriver")
+        except Exception as e:
+            logger.warning(f"Automatic ChromeDriver failed: {e}")
             try:
-                # Basit ChromeDriver yaklaşımı
+                # WebDriver Manager ile
+                logger.info("Trying ChromeDriverManager...")
+                service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=options)
+                logger.info("Successfully created driver with ChromeDriverManager")
+            except Exception as e2:
+                logger.warning(f"ChromeDriverManager failed: {e2}")
+                # Son çare - service olmadan
+                logger.info("Trying without service...")
                 driver = webdriver.Chrome(options=options)
-                logger.info("Successfully created driver with automatic ChromeDriver")
-            except Exception as e:
-                logger.warning(f"Automatic ChromeDriver failed: {e}")
-                try:
-                    # WebDriver Manager ile
-                    service = Service(ChromeDriverManager().install())
-                    driver = webdriver.Chrome(service=service, options=options)
-                    logger.info("Successfully created driver with ChromeDriverManager")
-                except Exception as e2:
-                    logger.warning(f"ChromeDriverManager failed: {e2}")
-                    # Son çare - service olmadan
-                    driver = webdriver.Chrome(options=options)
-                    logger.info("Successfully created driver without service")
-            except Exception as e:
-                error = e
-        
-        # Thread ile timeout
-        thread = threading.Thread(target=create_driver)
-        thread.daemon = True
-        thread.start()
-        thread.join(timeout=60)  # 60 saniye timeout
-        
-        if thread.is_alive():
-            raise TimeoutError("Driver creation timeout after 60 seconds")
-        
-        if error:
-            raise error
+                logger.info("Successfully created driver without service")
         
         driver.set_window_size(1920, 1080)
         return driver
