@@ -93,11 +93,11 @@ class ProfileScraperTool:
                 request, session_id, selected_field, selected_specialties
             ))
             
-                            return {
-                    "session_id": session_id,
-                    "status": "streaming",
-                    "message": "Scraping başlatıldı, sonuçlar stream olarak gelecek"
-                }
+            return {
+                "session_id": session_id,
+                "status": "streaming",
+                "message": "Scraping başlatıldı, sonuçlar stream olarak gelecek"
+            }
                 
         except Exception as e:
             logger.error(f"Profil arama hatası: {e}")
