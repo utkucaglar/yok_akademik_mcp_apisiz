@@ -50,16 +50,11 @@ class SeleniumManager:
         """Yeni Chrome WebDriver oluştur"""
         options = Options()
         options.add_argument("--headless=new")
-        options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-gpu")
         options.add_argument("--disable-extensions")
-        options.add_argument("--disable-plugins")
         options.add_argument("--disable-images")
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option('useAutomationExtension', False)
-        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         
         # Performans optimizasyonları
         prefs = {
@@ -69,9 +64,8 @@ class SeleniumManager:
         }
         options.add_experimental_option("prefs", prefs)
         
-        # Chrome versiyonunu al ve uyumlu ChromeDriver kullan
-        chrome_version = self._get_chrome_version()
-        logger.info(f"Detected Chrome version: {chrome_version}")
+        # Chrome versiyon algılama kısmını atla
+        logger.info("Using simplified ChromeDriver approach")
         
         # Basit timeout ile driver oluştur
         import threading
@@ -83,29 +77,21 @@ class SeleniumManager:
         def create_driver():
             nonlocal driver, error
             try:
-                # Selenium 4.16+ ile otomatik ChromeDriver kullan
+                # Basit ChromeDriver yaklaşımı
                 driver = webdriver.Chrome(options=options)
                 logger.info("Successfully created driver with automatic ChromeDriver")
             except Exception as e:
                 logger.warning(f"Automatic ChromeDriver failed: {e}")
                 try:
-                    # Önce Chrome versiyonuna uygun ChromeDriver dene
-                    service = Service(ChromeDriverManager(version=chrome_version).install())
+                    # WebDriver Manager ile
+                    service = Service(ChromeDriverManager().install())
                     driver = webdriver.Chrome(service=service, options=options)
-                    logger.info(f"Successfully created driver with ChromeDriver for version {chrome_version}")
+                    logger.info("Successfully created driver with ChromeDriverManager")
                 except Exception as e2:
-                    logger.warning(f"ChromeDriver for version {chrome_version} failed: {e2}")
-                    try:
-                        # Latest versiyonu dene
-                        service = Service(ChromeDriverManager(version="latest").install())
-                        driver = webdriver.Chrome(service=service, options=options)
-                        logger.info("Successfully created driver with latest ChromeDriver")
-                    except Exception as e3:
-                        logger.warning(f"Latest ChromeDriver failed: {e3}")
-                        # Son çare olarak stable versiyon
-                        service = Service(ChromeDriverManager().install())
-                        driver = webdriver.Chrome(service=service, options=options)
-                        logger.info("Successfully created driver with stable ChromeDriver")
+                    logger.warning(f"ChromeDriverManager failed: {e2}")
+                    # Son çare - service olmadan
+                    driver = webdriver.Chrome(options=options)
+                    logger.info("Successfully created driver without service")
             except Exception as e:
                 error = e
         
@@ -113,10 +99,10 @@ class SeleniumManager:
         thread = threading.Thread(target=create_driver)
         thread.daemon = True
         thread.start()
-        thread.join(timeout=30)  # 30 saniye timeout
+        thread.join(timeout=60)  # 60 saniye timeout
         
         if thread.is_alive():
-            raise TimeoutError("Driver creation timeout after 30 seconds")
+            raise TimeoutError("Driver creation timeout after 60 seconds")
         
         if error:
             raise error
