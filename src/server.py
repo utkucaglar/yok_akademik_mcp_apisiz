@@ -4,6 +4,17 @@ import logging
 from typing import Any, Sequence
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
+
+# Mock classes for compatibility
+class NotificationOptions:
+    def __init__(self, tools_changed=False, resources_changed=False, prompts_changed=False):
+        self.tools_changed = tools_changed
+        self.resources_changed = resources_changed
+        self.prompts_changed = prompts_changed
+
+class ExperimentalCapabilities:
+    def __init__(self):
+        pass
 from mcp.server.stdio import stdio_server
 from mcp.types import (
     Resource,
@@ -140,7 +151,14 @@ async def main():
             InitializationOptions(
                 server_name="yok-akademik-scraper",
                 server_version="1.0.0",
-                capabilities=server.get_capabilities()
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(
+                        tools_changed=False,
+                        resources_changed=False,
+                        prompts_changed=False
+                    ),
+                    experimental_capabilities=ExperimentalCapabilities()
+                )
             )
         )
 
