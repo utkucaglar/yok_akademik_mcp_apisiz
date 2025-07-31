@@ -96,17 +96,17 @@ class SeleniumManager:
             except Exception as e:
                 logger.warning(f"Driver kapatılırken hata: {e}")
     
-    async def navigate_to_page(self, driver: webdriver.Chrome, url: str, timeout: int = 60):
+    async def navigate_to_page(self, driver: webdriver.Chrome, url: str, timeout: int = 30):
         """Sayfaya git ve yüklenmeyi bekle"""
         try:
             driver.get(url)
-            await asyncio.sleep(10)  # Sayfa yüklenme beklemesi artırıldı
+            await asyncio.sleep(3)  # Sayfa yüklenme beklemesi kısaltıldı
             return True
         except Exception as e:
             logger.error(f"Sayfa yüklenemedi {url}: {e}")
             return False
     
-    async def wait_for_element(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 60):
+    async def wait_for_element(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 15):
         """Element için bekle"""
         try:
             WebDriverWait(driver, timeout).until(
@@ -117,7 +117,7 @@ class SeleniumManager:
             logger.error(f"Element bulunamadı {by}={value}: {e}")
             return False
     
-    async def wait_for_clickable(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 60):
+    async def wait_for_clickable(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 15):
         """Tıklanabilir element için bekle"""
         try:
             WebDriverWait(driver, timeout).until(

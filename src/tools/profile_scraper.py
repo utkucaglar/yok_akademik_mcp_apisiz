@@ -47,7 +47,7 @@ class ProfileScraperTool:
         return green_label, blue_label, keywords
     
     async def search_profiles(self, **kwargs) -> Dict[str, Any]:
-        """Akademisyen profillerini ara - Async stream version"""
+        """Akademisyen profillerini ara - Fast version"""
         try:
             logger.info(f"Search profiles başlatıldı: {kwargs}")
             # Request'i doğrula
@@ -56,10 +56,6 @@ class ProfileScraperTool:
             # Session ID oluştur
             session_id = self._generate_session_id()
             logger.info(f"Yeni session başlatıldı: {session_id}")
-            
-            # Stream başlat
-            await stream_manager.start_streaming(session_id, self._stream_callback)
-            await stream_manager.update_session_status(session_id, "initializing")
             
             # Fields verilerini yükle
             fields_data = await self.file_manager.load_fields()
@@ -88,23 +84,24 @@ class ProfileScraperTool:
                     else:
                         logger.warning(f"Uzmanlık ID {specialty_id} bulunamadı!")
             
-            # Session directory oluştur
-            session_dir = self.file_manager.get_session_dir(session_id)
-            await self.file_manager.create_session_dir(session_id)
-            
-            # Async scraping başlat (background task)
-            asyncio.create_task(self._async_scrape_profiles(
-                request, session_id, selected_field, selected_specialties
-            ))
-            
-            # File monitoring başlat (background task)
-            asyncio.create_task(stream_manager.monitor_session_files(session_id, session_dir))
-            
-            return {
-                "session_id": session_id,
-                "status": "streaming",
-                "message": "Scraping başlatıldı, sonuçlar stream olarak gelecek"
-            }
+            # WebDriver ile scraping başlat (synchronous)
+            logger.info("WebDriver oluşturuluyor...")
+            async with self.selenium_manager.get_driver() as driver:
+                logger.info("WebDriver başarıyla oluşturuldu, scraping başlıyor...")
+                profiles = await self._scrape_profiles(
+                    driver, request, session_id, selected_field, selected_specialties
+                )
+                
+                # Sonuçları kaydet
+                await self.file_manager.save_profiles(session_id, profiles)
+                await self.file_manager.mark_session_complete(session_id, "main")
+                
+                return {
+                    "session_id": session_id,
+                    "profiles": profiles,
+                    "total_count": len(profiles),
+                    "status": "completed"
+                }
                 
         except Exception as e:
             logger.error(f"Profil arama hatası: {e}")
@@ -242,9 +239,9 @@ class ProfileScraperTool:
                 
                 page_num += 1
                 
-                # Progressive saving
-                if len(profiles) % 20 == 0:
-                    await self.file_manager.save_profiles(session_id, profiles)
+                # Hızlı scraping için sadece ilk sayfa
+                if page_num > 1:
+                    break
             
             return profiles
             

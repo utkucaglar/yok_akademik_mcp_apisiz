@@ -136,21 +136,7 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
     try:
         if name == "search_academic_profiles":
             result = await profile_scraper.search_profiles(**arguments)
-            
-            # Stream-based response
-            if result.get("status") == "streaming":
-                session_id = result["session_id"]
-                # Stream callback'i ayarla
-                await stream_manager.start_streaming(session_id, lambda msg: _send_stream_update(msg))
-                
-                return [TextContent(type="text", text=json.dumps({
-                    "session_id": session_id,
-                    "status": "streaming",
-                    "message": "Scraping başlatıldı. Sonuçlar real-time olarak gelecek.",
-                    "stream_url": f"stream://{session_id}"
-                }, ensure_ascii=False, indent=2))]
-            else:
-                return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
         elif name == "get_collaborators":
             result = await collaborator_scraper.get_collaborators(**arguments)
