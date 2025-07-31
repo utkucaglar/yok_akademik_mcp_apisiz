@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Any, Sequence
 from mcp.server import Server
-from mcp.server.models import InitializationOptions
+from mcp.server.models import InitializationOptions, NotificationOptions
 from mcp.server.stdio import stdio_server
 from mcp.types import (
     Resource,
@@ -141,7 +141,11 @@ async def main():
                 server_name="yok-akademik-scraper",
                 server_version="1.0.0",
                 capabilities=server.get_capabilities(
-                    notification_options=None,
+                    notification_options=NotificationOptions(
+                        tools_changed=False,
+                        resources_changed=False,
+                        prompts_changed=False
+                    ),
                     experimental_capabilities={}
                 )
             )

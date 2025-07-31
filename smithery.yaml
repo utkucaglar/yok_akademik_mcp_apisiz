@@ -1,0 +1,90 @@
+name: yok-akademik-scraper
+version: 1.0.0
+description: YÖK Akademik veri tabanından akademisyen profilleri ve işbirlikçilerini scrape eden MCP server
+
+# Runtime configuration
+runtime:
+  type: container
+  dockerfile: Dockerfile
+
+# MCP server configuration
+mcp:
+  servers:
+    yok-scraper:
+      command: python
+      args: ["-m", "src.server"]
+      env:
+        PYTHONPATH: "."
+        CHROME_HEADLESS: "true"
+        MAX_PROFILES: "100"
+        TIMEOUT: "30000"
+
+# Build configuration
+build:
+  context: .
+  dockerfile: Dockerfile
+
+# Environment variables
+env:
+  - name: PYTHONPATH
+    value: "."
+  - name: CHROME_HEADLESS
+    value: "true"
+  - name: MAX_PROFILES
+    value: "100"
+  - name: TIMEOUT
+    value: "30000"
+
+# Health check
+health:
+  path: /health
+  port: 8000
+  initial_delay: 30
+  period: 10
+  timeout: 5
+  retries: 3
+
+# Resources
+resources:
+  cpu: "0.5"
+  memory: "1Gi"
+  storage: "10Gi"
+
+# Networking
+networking:
+  ports:
+    - port: 8000
+      protocol: tcp
+      description: "MCP server port"
+
+# Security
+security:
+  run_as: "1000:1000"
+  read_only_root: false
+  allow_privilege_escalation: false
+  capabilities:
+    - CHOWN
+    - SETGID
+    - SETUID
+
+# Logging
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Monitoring
+monitoring:
+  metrics:
+    enabled: true
+    port: 9090
+  tracing:
+    enabled: false
+
+# Dependencies
+dependencies:
+  - name: google-chrome
+    version: "latest"
+    type: system
+  - name: python
+    version: "3.11"
+    type: runtime 
