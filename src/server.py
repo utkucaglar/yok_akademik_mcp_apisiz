@@ -45,7 +45,7 @@ async def handle_list_tools() -> list[Tool]:
     return [
         Tool(
             name="search_academic_profiles",
-            description="YÖK akademik veri tabanında akademisyen arama yapar",
+            description="❌ DEPRECATED: Eski arama tool'u - live_scraper_chat kullanın",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -81,7 +81,7 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="live_scraper_chat",
             type="chat",
-            description="Scraping yaparken canlı bilgi paylaşır - Real-time streaming chat tool",
+            description="🔴 LIVE SCRAPING: Akademisyen arama yaparken canlı sonuçları gösterir - Real-time streaming chat tool",
             inputSchema={
                 "type": "object",
                 "properties": {
