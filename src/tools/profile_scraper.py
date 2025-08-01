@@ -564,31 +564,44 @@ class ProfileScraperTool:
                 # Hata durumunda boş session dosyası oluştur
                 await self.file_manager.save_profiles(session_id, [])
             
-            # 20 saniye bekle ve ilk sonuçları al (Smithery için optimize edildi)
-            await asyncio.sleep(20)
-            
-            # Session dosyasını kontrol et
-            session_data = await self.file_manager.load_session_data(session_id, "profiles")
-            if session_data and session_data.get("profiles"):
-                profiles = session_data["profiles"]
-                # İlk 10 profili göster
-                preview_profiles = profiles[:10]
+            # Smithery için hızlı sonuç - Selenium çalışmazsa hemen session ID döndür
+            try:
+                # 5 saniye bekle (Smithery için kısaltıldı)
+                await asyncio.sleep(5)
                 
-                return {
-                    "success": True,
-                    "session_id": session_id,
-                    "message": f"'{name}' için hızlı arama tamamlandı!",
-                    "preview_count": len(preview_profiles),
-                    "total_found": len(profiles),
-                    "max_results": max_results,
-                    "preview_profiles": preview_profiles,
-                    "next_steps": [
-                        "check_scraping_status ile durum kontrol edebilirsiniz",
-                        "get_full_results ile tüm sonuçları alabilirsiniz"
-                    ]
-                }
-            else:
-                # Session dosyası yoksa bile session ID'yi döndür
+                # Session dosyasını kontrol et
+                session_data = await self.file_manager.load_session_data(session_id, "profiles")
+                if session_data and session_data.get("profiles"):
+                    profiles = session_data["profiles"]
+                    # İlk 10 profili göster
+                    preview_profiles = profiles[:10]
+                    
+                    return {
+                        "success": True,
+                        "session_id": session_id,
+                        "message": f"'{name}' için hızlı arama tamamlandı!",
+                        "preview_count": len(preview_profiles),
+                        "total_found": len(profiles),
+                        "max_results": max_results,
+                        "preview_profiles": preview_profiles,
+                        "next_steps": [
+                            "check_scraping_status ile durum kontrol edebilirsiniz",
+                            "get_full_results ile tüm sonuçları alabilirsiniz"
+                        ]
+                    }
+                else:
+                    # Session dosyası yoksa bile session ID'yi döndür
+                    return {
+                        "success": False,
+                        "session_id": session_id,
+                        "message": f"'{name}' için arama başlatıldı, henüz sonuç yok. Session ID: {session_id}",
+                        "next_steps": [
+                            f"check_scraping_status ile durum kontrol edin (session_id: {session_id})"
+                        ]
+                    }
+            except Exception as e:
+                logger.error(f"Quick search session kontrol hatası: {e}")
+                # Hata durumunda session ID'yi döndür
                 return {
                     "success": False,
                     "session_id": session_id,
@@ -616,8 +629,8 @@ class ProfileScraperTool:
             # Session dosyasını oku
             session_data = await self.file_manager.load_session_data(session_id, "profiles")
             
-            if session_data and session_data.get("profiles"):
-                profiles = session_data["profiles"]
+            if session_data:
+                profiles = session_data.get("profiles", [])
                 completed = status.get("profiles_completed", False)
                 
                 return {
