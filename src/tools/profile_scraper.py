@@ -566,12 +566,13 @@ class ProfileScraperTool:
                     ]
                 }
             else:
+                # Session dosyası yoksa bile session ID'yi döndür
                 return {
                     "success": False,
                     "session_id": session_id,
-                    "message": f"'{name}' için arama başlatıldı, henüz sonuç yok",
+                    "message": f"'{name}' için arama başlatıldı, henüz sonuç yok. Session ID: {session_id}",
                     "next_steps": [
-                        "check_scraping_status ile durum kontrol edin"
+                        f"check_scraping_status ile durum kontrol edin (session_id: {session_id})"
                     ]
                 }
                 
@@ -606,11 +607,20 @@ class ProfileScraperTool:
                     "message": f"Scraping durumu: {len(profiles)} profil bulundu" + (" (tamamlandı)" if completed else " (devam ediyor)")
                 }
             else:
+                # Session dizinini kontrol et
+                session_dir = self.file_manager.get_session_dir(session_id)
+                dir_exists = session_dir.exists()
+                
                 return {
                     "success": False,
                     "session_id": session_id,
                     "status": "not_found",
-                    "message": "Session bulunamadı veya henüz sonuç yok"
+                    "message": f"Session bulunamadı veya henüz sonuç yok. Dizin var mı: {dir_exists}",
+                    "debug_info": {
+                        "session_dir": str(session_dir),
+                        "dir_exists": dir_exists,
+                        "files": [f.name for f in session_dir.glob("*")] if dir_exists else []
+                    }
                 }
                 
         except Exception as e:
