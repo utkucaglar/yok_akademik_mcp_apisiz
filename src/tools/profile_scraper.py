@@ -122,12 +122,13 @@ class ProfileScraperTool:
             logger.info(f"Async scraping başlatıldı: {session_id}")
             logger.info(f"Request: {request.name}, field: {selected_field}, specialties: {selected_specialties}")
             
-            # WebDriver ile scraping başlat
-            logger.info("WebDriver oluşturuluyor...")
-            driver = await self.selenium_manager.get_driver()
-            logger.info("WebDriver başarıyla oluşturuldu, scraping başlıyor...")
-            
+            # WebDriver ile scraping başlat - Smithery için güvenli hale getirildi
+            driver = None
             try:
+                logger.info("WebDriver oluşturuluyor...")
+                driver = await self.selenium_manager.get_driver()
+                logger.info("WebDriver başarıyla oluşturuldu, scraping başlıyor...")
+                
                 profiles = await self._scrape_profiles(
                     driver, request, session_id, selected_field, selected_specialties
                 )
@@ -157,11 +158,26 @@ class ProfileScraperTool:
                         logger.info("Session tamamlandı olarak işaretlendi")
                     else:
                         logger.warning("Hiç profil bulunamadı, session tamamlanmadı")
+                        # Boş session dosyası oluştur
+                        await self.file_manager.save_profiles(session_id, [])
                 else:
                     logger.error("Profil verileri kaydedilemedi!")
+                    # Hata durumunda boş session dosyası oluştur
+                    await self.file_manager.save_profiles(session_id, [])
+                    
+            except Exception as e:
+                logger.error(f"Scraping hatası: {e}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                # Hata durumunda boş session dosyası oluştur
+                await self.file_manager.save_profiles(session_id, [])
             finally:
-                # Driver'ı kapat
-                await self.selenium_manager.close_driver(driver)
+                # Driver'ı güvenli şekilde kapat
+                if driver:
+                    try:
+                        await self.selenium_manager.close_driver(driver)
+                    except Exception as e:
+                        logger.warning(f"Driver kapatma hatası: {e}")
                 
         except Exception as e:
             logger.error(f"Async scraping hatası: {e}")
@@ -537,10 +553,16 @@ class ProfileScraperTool:
             # Request oluştur
             request = SearchRequest(name=name, max_results=max_results)
             
-            # Arka planda scraping başlat
-            asyncio.create_task(self._async_scrape_profiles(
-                request, session_id, None, []
-            ))
+            # Arka planda scraping başlat - Smithery için try-catch eklendi
+            try:
+                asyncio.create_task(self._async_scrape_profiles(
+                    request, session_id, None, []
+                ))
+                logger.info(f"Scraping task başlatıldı: {session_id}")
+            except Exception as e:
+                logger.error(f"Scraping task başlatılamadı: {e}")
+                # Hata durumunda boş session dosyası oluştur
+                await self.file_manager.save_profiles(session_id, [])
             
             # 20 saniye bekle ve ilk sonuçları al (Smithery için optimize edildi)
             await asyncio.sleep(20)
