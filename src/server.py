@@ -80,6 +80,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="live_scraper_chat",
+            type="chat",
             description="Scraping yaparken canlı bilgi paylaşır - Real-time streaming chat tool",
             inputSchema={
                 "type": "object",
@@ -188,17 +189,12 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
             messages = arguments.get("messages", [])
             chat_kwargs = {k: v for k, v in arguments.items() if k != "messages"}
             
-            # İlk response'u hemen gönder
-            first_response = None
+            # Streaming response'ları direkt olarak yield et
+            responses = []
             async for response in live_scraper_chat.handle_chat_request(messages, **chat_kwargs):
-                if first_response is None:
-                    first_response = response
-                    break
+                responses.append(TextContent(type="text", text=json.dumps(response, ensure_ascii=False, indent=2)))
             
-            if first_response:
-                return [TextContent(type="text", text=json.dumps(first_response, ensure_ascii=False, indent=2))]
-            else:
-                return [TextContent(type="text", text=json.dumps({"error": "No response generated"}, ensure_ascii=False, indent=2))]
+            return responses
         
         elif name == "get_collaborators":
             result = await collaborator_scraper.get_collaborators(**arguments)
