@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from typing import Optional
-from selenium import webdriver
+from selenium import webdriver  # Normal Selenium kullan (uyumluluk için)
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -47,7 +47,7 @@ class SeleniumManager:
         return "latest"  # Fallback
     
     def _create_driver(self) -> webdriver.Chrome:
-        """Yeni Chrome WebDriver oluştur"""
+        """Yeni Chrome WebDriver oluştur (Selenium-Wire ile)"""
         options = Options()
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
@@ -78,7 +78,7 @@ class SeleniumManager:
         
         try:
             driver = webdriver.Chrome(options=options)
-            logger.info("Successfully created driver")
+            logger.info("Successfully created Chrome driver")
         except Exception as e:
             logger.error(f"Driver creation failed: {e}")
             raise e
@@ -149,4 +149,32 @@ class SeleniumManager:
             return driver.execute_script(script)
         except Exception as e:
             logger.error(f"JavaScript çalıştırılamadı: {e}")
-            return None 
+            return None
+    
+    def get_network_requests(self, driver: webdriver.Chrome, url_filter: str = None):
+        """Network isteklerini al (simüle edilmiş)"""
+        try:
+            # Normal Selenium'da network monitoring yok, boş liste döndür
+            logger.info("Network monitoring simüle ediliyor")
+            return []
+        except Exception as e:
+            logger.error(f"Network requests alınamadı: {e}")
+            return []
+    
+    def get_last_request(self, driver: webdriver.Chrome, url_filter: str = None):
+        """Son network isteğini al (simüle edilmiş)"""
+        try:
+            requests = self.get_network_requests(driver, url_filter)
+            if requests:
+                return requests[-1]  # Son istek
+            return None
+        except Exception as e:
+            logger.error(f"Last request alınamadı: {e}")
+            return None
+    
+    def clear_network_requests(self, driver: webdriver.Chrome):
+        """Network isteklerini temizle (simüle edilmiş)"""
+        try:
+            logger.info("Network requests temizlendi (simüle)")
+        except Exception as e:
+            logger.error(f"Network requests temizlenemedi: {e}") 

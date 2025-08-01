@@ -5,9 +5,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from ..models.schemas import CollaboratorRequest, Collaborator, SessionStatus
-from ..utils.selenium_manager import SeleniumManager
-from ..utils.file_manager import FileManager
+from models.schemas import CollaboratorRequest, Collaborator, SessionStatus
+from utils.selenium_manager import SeleniumManager
+from utils.file_manager import FileManager
 
 logger = logging.getLogger(__name__)
 

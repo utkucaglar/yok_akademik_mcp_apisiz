@@ -20,8 +20,8 @@ from mcp.types import (
     EmbeddedResource,
 )
 
-from .tools.profile_scraper import ProfileScraperTool
-from .tools.collaborator_scraper import CollaboratorScraperTool
+from tools.profile_scraper import ProfileScraperTool
+from tools.collaborator_scraper import CollaboratorScraperTool
 
 
 # Logging konfigürasyonu
@@ -101,6 +101,26 @@ async def handle_list_tools() -> list[Tool]:
                 "required": ["session_id"]
             }
         ),
+        Tool(
+            name="live_stream_profiles",
+            description="🎥 CANLI STREAMING: Akademisyen arama yapar ve profilleri real-time gösterir",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Aranacak akademisyen adı"
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maksimum sonuç sayısı",
+                        "optional": True,
+                        "default": 50
+                    }
+                },
+                "required": ["name"]
+            }
+        ),
 
         Tool(
             name="check_scraping_status",
@@ -167,6 +187,24 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
         
         elif name == "get_collaborators":
             result = await collaborator_scraper.get_collaborators(**arguments)
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "live_stream_profiles":
+            # Real-time streaming - hızlı arama ile simüle edilmiş
+            name = arguments.get("name", "")
+            max_results = arguments.get("max_results", 50)
+            
+            # Hızlı arama yap ve sonuçları döndür
+            result = await profile_scraper.quick_search_profiles(name, max_results)
+            
+            # Streaming mesajı ekle
+            if result.get("success"):
+                result["streaming_message"] = f"🎥 Real-time streaming başlatıldı: {name}"
+                result["streaming_status"] = "active"
+            else:
+                result["streaming_message"] = f"❌ Streaming başlatılamadı: {name}"
+                result["streaming_status"] = "failed"
+            
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
         else:

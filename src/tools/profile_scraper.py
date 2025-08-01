@@ -10,10 +10,10 @@ from selenium.webdriver.support import expected_conditions as EC
 import random
 import string
 
-from ..models.schemas import SearchRequest, AcademicProfile, SessionStatus
-from ..utils.selenium_manager import SeleniumManager
-from ..utils.file_manager import FileManager
-from ..utils.stream_manager import stream_manager
+from models.schemas import SearchRequest, AcademicProfile, SessionStatus
+from utils.selenium_manager import SeleniumManager
+from utils.file_manager import FileManager
+from utils.stream_manager import stream_manager
 
 
 logger = logging.getLogger(__name__)
@@ -219,6 +219,10 @@ class ProfileScraperTool:
             
             # Arama yap
             logger.info(f"Arama yapılıyor: {request.name}")
+            
+            # Network isteklerini temizle (önceki istekleri temizle)
+            self.selenium_manager.clear_network_requests(driver)
+            
             search_box = driver.find_element(By.ID, "aramaTerim")
             search_box.clear()
             search_box.send_keys(request.name)
@@ -227,6 +231,16 @@ class ProfileScraperTool:
             search_button = driver.find_element(By.ID, "searchButton")
             search_button.click()
             logger.info("Arama butonu tıklandı!")
+            
+            # Network isteklerini izle
+            await asyncio.sleep(2)  # İsteklerin gelmesini bekle
+            network_requests = self.selenium_manager.get_network_requests(driver, "AkademikArama")
+            logger.info(f"Network istekleri bulundu: {len(network_requests)}")
+            
+            for req in network_requests:
+                logger.info(f"Network isteği: {req.url}")
+                if req.response:
+                    logger.info(f"Response status: {req.response.status_code}")
             
             # Hemen Akademisyenler sekmesini bekle ve tıkla
             try:
@@ -778,4 +792,91 @@ class ProfileScraperTool:
                 "error": f"Profil detayları alınırken hata: {str(e)}",
                 "session_id": session_id,
                 "profile_name": profile_name
-            } 
+            }
+    
+    async def stream_profiles_realtime(self, name: str, max_results: int = 100):
+        """Real-time profil streaming (Selenium-Wire ile)"""
+        try:
+            logger.info(f"Real-time streaming başlatıldı: {name}")
+            
+            # Session ID oluştur
+            session_id = self._generate_session_id()
+            logger.info(f"Streaming session: {session_id}")
+            
+            # Request oluştur
+            request = SearchRequest(name=name, max_results=max_results)
+            
+            # Driver oluştur
+            driver = await self.selenium_manager.get_driver()
+            
+            try:
+                # Ana sayfaya git
+                success = await self.selenium_manager.navigate_to_page(driver, self.base_url + "AkademikArama/")
+                if not success:
+                    yield {"error": "Ana sayfa yüklenemedi"}
+                    return
+                
+                # Arama yap
+                search_box = await self.selenium_manager.wait_for_element(driver, By.ID, "aramaTerim")
+                if not search_box:
+                    yield {"error": "Arama kutusu bulunamadı"}
+                    return
+                
+                # Network isteklerini temizle
+                self.selenium_manager.clear_network_requests(driver)
+                
+                # Arama yap
+                search_box.clear()
+                search_box.send_keys(request.name)
+                search_button = driver.find_element(By.ID, "searchButton")
+                search_button.click()
+                
+                # Real-time network monitoring
+                profiles_found = 0
+                while profiles_found < max_results:
+                    # Network isteklerini kontrol et
+                    network_requests = self.selenium_manager.get_network_requests(driver, "AkademikArama")
+                    
+                    for req in network_requests:
+                        if req.response and req.response.status_code == 200:
+                            # Profil verisi olabilir
+                            try:
+                                profile_data = self._extract_profile_from_request(req)
+                                if profile_data:
+                                    profiles_found += 1
+                                    yield {
+                                        "type": "profile",
+                                        "session_id": session_id,
+                                        "profile": profile_data,
+                                        "count": profiles_found
+                                    }
+                            except Exception as e:
+                                logger.error(f"Profil çıkarma hatası: {e}")
+                    
+                    await asyncio.sleep(1)  # 1 saniye bekle
+                    
+                    # Timeout kontrolü
+                    if profiles_found == 0 and len(network_requests) > 10:
+                        yield {"error": "Profil bulunamadı"}
+                        break
+                
+                # Session'ı kaydet
+                await self.file_manager.save_profiles(session_id, [])
+                
+            finally:
+                await self.selenium_manager.close_driver(driver)
+                
+        except Exception as e:
+            logger.error(f"Real-time streaming hatası: {e}")
+            yield {"error": f"Streaming hatası: {str(e)}"}
+    
+    def _extract_profile_from_request(self, request):
+        """Network isteğinden profil verisi çıkar"""
+        try:
+            if request.response and request.response.body:
+                # Response body'den profil verisi çıkar
+                # Bu kısım YÖK sitesinin response formatına göre ayarlanacak
+                return None  # Şimdilik None döndür
+        except Exception as e:
+            logger.error(f"Request'ten profil çıkarılamadı: {e}")
+            return None 
