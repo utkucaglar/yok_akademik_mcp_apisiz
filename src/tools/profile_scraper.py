@@ -124,9 +124,10 @@ class ProfileScraperTool:
             
             # WebDriver ile scraping başlat
             logger.info("WebDriver oluşturuluyor...")
-            async with self.selenium_manager.get_driver() as driver:
-                logger.info("WebDriver başarıyla oluşturuldu, scraping başlıyor...")
-                
+            driver = await self.selenium_manager.get_driver()
+            logger.info("WebDriver başarıyla oluşturuldu, scraping başlıyor...")
+            
+            try:
                 profiles = await self._scrape_profiles(
                     driver, request, session_id, selected_field, selected_specialties
                 )
@@ -158,6 +159,9 @@ class ProfileScraperTool:
                         logger.warning("Hiç profil bulunamadı, session tamamlanmadı")
                 else:
                     logger.error("Profil verileri kaydedilemedi!")
+            finally:
+                # Driver'ı kapat
+                await self.selenium_manager.close_driver(driver)
                 
         except Exception as e:
             logger.error(f"Async scraping hatası: {e}")
@@ -210,14 +214,45 @@ class ProfileScraperTool:
             
             # Hemen Akademisyenler sekmesini bekle ve tıkla
             try:
-                akademisyenler_link = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.LINK_TEXT, "Akademisyenler"))
-                )
-                akademisyenler_link.click()
-                logger.info("Akademisyenler sekmesine geçildi")
-                await asyncio.sleep(2)
+                # Önce sayfanın yüklenmesini bekle
+                await asyncio.sleep(3)
+                
+                # Akademisyenler linkini farklı yöntemlerle bul
+                akademisyenler_link = None
+                
+                # Yöntem 1: Link text ile
+                try:
+                    akademisyenler_link = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((By.LINK_TEXT, "Akademisyenler"))
+                    )
+                except:
+                    pass
+                
+                # Yöntem 2: Partial text ile
+                if not akademisyenler_link:
+                    try:
+                        akademisyenler_link = WebDriverWait(driver, 5).until(
+                            EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, "Akademisyen"))
+                        )
+                    except:
+                        pass
+                
+                # Yöntem 3: CSS selector ile
+                if not akademisyenler_link:
+                    try:
+                        akademisyenler_link = driver.find_element(By.CSS_SELECTOR, "a[href*='akademisyen']")
+                    except:
+                        pass
+                
+                if akademisyenler_link:
+                    akademisyenler_link.click()
+                    logger.info("Akademisyenler sekmesine geçildi")
+                    await asyncio.sleep(2)
+                else:
+                    logger.warning("Akademisyenler sekmesi bulunamadı, mevcut sayfada devam ediliyor")
+                    
             except Exception as e:
-                logger.error(f"Akademisyenler sekmesi bulunamadı: {e}")
+                logger.error(f"Akademisyenler sekmesi hatası: {e}")
                 # Sekme bulunamazsa devam et
             
             # Profil satırlarını topla
@@ -227,15 +262,40 @@ class ProfileScraperTool:
             profile_id_counter = 1
             while True:
                 logger.info(f"{page_num}. sayfa yükleniyor...")
+                
+                # Sayfa yüklenmesini bekle
+                await asyncio.sleep(2)
+                
+                # Profil satırlarını farklı yöntemlerle bul
+                profile_rows = []
+                
+                # Yöntem 1: authorInfo_ ile başlayan ID'ler
                 try:
-                    WebDriverWait(driver, 10).until(
+                    WebDriverWait(driver, 8).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "tr[id^='authorInfo_']"))
                     )
+                    profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
                 except Exception as e:
-                    logger.error(f"Profil satırları yüklenemedi: {e}")
-                    break
-                profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
+                    logger.warning(f"authorInfo_ profilleri bulunamadı: {e}")
+                
+                # Yöntem 2: Tablo satırları
+                if not profile_rows:
+                    try:
+                        profile_rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
+                        # Boş satırları filtrele
+                        profile_rows = [row for row in profile_rows if row.find_elements(By.CSS_SELECTOR, "td")]
+                    except Exception as e:
+                        logger.warning(f"Tablo satırları bulunamadı: {e}")
+                
+                # Yöntem 3: Link içeren satırlar
+                if not profile_rows:
+                    try:
+                        profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr:has(a)")
+                    except Exception as e:
+                        logger.warning(f"Link içeren satırlar bulunamadı: {e}")
+                
                 logger.info(f"{page_num}. sayfada {len(profile_rows)} profil bulundu")
+                
                 if len(profile_rows) == 0:
                     logger.info("Profil bulunamadı, döngü bitiyor")
                     break

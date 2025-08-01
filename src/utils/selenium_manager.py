@@ -80,17 +80,17 @@ class SeleniumManager:
         driver.set_window_size(1920, 1080)
         return driver
     
-    @asynccontextmanager
     async def get_driver(self):
-        """Asenkron context manager ile WebDriver al"""
+        """WebDriver al"""
         driver = self._create_driver()
+        return driver
+    
+    async def close_driver(self, driver: webdriver.Chrome):
+        """WebDriver'ı kapat"""
         try:
-            yield driver
-        finally:
-            try:
-                driver.quit()
-            except Exception as e:
-                logger.warning(f"Driver kapatılırken hata: {e}")
+            driver.quit()
+        except Exception as e:
+            logger.warning(f"Driver kapatılırken hata: {e}")
     
     async def navigate_to_page(self, driver: webdriver.Chrome, url: str, timeout: int = 10):
         """Sayfaya git ve yüklenmeyi bekle"""
