@@ -50,7 +50,7 @@ class LiveScraperChatTool:
             # Arama parametrelerini hazırla
             search_params = {
                 "name": last_user_message.strip(),
-                "max_results": kwargs.get("max_results", 50)
+                "max_results": kwargs.get("max_results", 100)
             }
             
             # Field ve specialty parametrelerini ekle

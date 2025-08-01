@@ -463,4 +463,70 @@ class ProfileScraperTool:
     
     async def get_session_status(self, session_id: str) -> Dict[str, Any]:
         """Session durumunu kontrol et"""
-        return await self.file_manager.get_session_status(session_id) 
+        return await self.file_manager.get_session_status(session_id)
+    
+    async def get_profile_details_from_session(self, session_id: str, profile_name: str, max_results: int = 10) -> Dict[str, Any]:
+        """Session dosyasından belirli bir akademisyenin detaylarını getir"""
+        try:
+            logger.info(f"Session {session_id}'den {profile_name} profillerini getiriyor...")
+            
+            # Session dosyasını oku
+            session_data = await self.file_manager.load_session_data(session_id, "profiles")
+            if not session_data or not session_data.get("profiles"):
+                return {
+                    "error": "Session bulunamadı veya profil verisi yok",
+                    "session_id": session_id,
+                    "profile_name": profile_name
+                }
+            
+            profiles = session_data["profiles"]
+            
+            # Profil adına göre filtrele (tam eşleşme)
+            matching_profiles = []
+            for profile in profiles:
+                if profile.get("name", "").upper() == profile_name.upper():
+                    matching_profiles.append(profile)
+            
+            if not matching_profiles:
+                return {
+                    "error": f"'{profile_name}' adında profil bulunamadı",
+                    "session_id": session_id,
+                    "profile_name": profile_name,
+                    "total_profiles_in_session": len(profiles)
+                }
+            
+            # Maksimum sonuç sayısını sınırla
+            matching_profiles = matching_profiles[:max_results]
+            
+            # Detaylı bilgileri formatla
+            detailed_profiles = []
+            for profile in matching_profiles:
+                detailed_profile = {
+                    "name": profile.get("name", "N/A"),
+                    "title": profile.get("title", "N/A"),
+                    "university": profile.get("header", "N/A").split("/")[0] if profile.get("header") else "N/A",
+                    "email": profile.get("email", ""),
+                    "profile_url": profile.get("url", ""),
+                    "photo_url": profile.get("photoUrl", ""),
+                    "labels": [profile.get("green_label", ""), profile.get("blue_label", "")],
+                    "keywords": profile.get("keywords", ""),
+                    "full_header": profile.get("header", "N/A")
+                }
+                detailed_profiles.append(detailed_profile)
+            
+            return {
+                "success": True,
+                "session_id": session_id,
+                "profile_name": profile_name,
+                "found_count": len(matching_profiles),
+                "total_in_session": len(profiles),
+                "profiles": detailed_profiles
+            }
+            
+        except Exception as e:
+            logger.error(f"Profile details error: {e}")
+            return {
+                "error": f"Profil detayları alınırken hata: {str(e)}",
+                "session_id": session_id,
+                "profile_name": profile_name
+            } 

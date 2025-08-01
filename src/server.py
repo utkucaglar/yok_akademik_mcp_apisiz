@@ -100,7 +100,7 @@ async def handle_list_tools() -> list[Tool]:
                         "type": "integer",
                         "description": "Maksimum sonuç sayısı",
                         "optional": True,
-                        "default": 50
+                        "default": 100
                     },
                     "field_id": {
                         "type": "integer",
@@ -173,6 +173,30 @@ async def handle_list_tools() -> list[Tool]:
                 "required": ["session_id"]
             }
         ),
+        Tool(
+            name="get_profile_details",
+            description="📋 Scrape edilmiş profillerden detaylı bilgi getirir",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Session ID (live_scraper_chat'ten alınan)"
+                    },
+                    "profile_name": {
+                        "type": "string",
+                        "description": "Aranacak akademisyen adı (tam eşleşme)"
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maksimum sonuç sayısı",
+                        "optional": True,
+                        "default": 10
+                    }
+                },
+                "required": ["session_id", "profile_name"]
+            }
+        ),
 
     ]
 
@@ -208,6 +232,15 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
         elif name == "get_stream_updates":
             session_id = arguments["session_id"].strip()
             result = await stream_manager.get_updates(session_id)
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "get_profile_details":
+            session_id = arguments["session_id"].strip()
+            profile_name = arguments["profile_name"].strip()
+            max_results = arguments.get("max_results", 10)
+            
+            # Session dosyasından profilleri oku
+            result = await profile_scraper.get_profile_details_from_session(session_id, profile_name, max_results)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
         else:
