@@ -100,6 +100,26 @@ class FileManager:
             logger.error(f"Traceback: {traceback.format_exc()}")
             return False
     
+    async def save_completed_profiles(self, session_id: str, completed_data: Dict[str, Any]) -> bool:
+        """Tamamlanmış profil verilerini kaydet (completed: true ile)"""
+        try:
+            logger.info(f"Tamamlanmış profil verileri kaydediliyor: {session_id}")
+            
+            session_dir = await self.create_session_dir(session_id)
+            profile_file = session_dir / "main_profile.json"
+            
+            # Dosya yazma işlemi
+            async with aiofiles.open(profile_file, 'w', encoding='utf-8') as f:
+                await f.write(json.dumps(completed_data, ensure_ascii=False, indent=2))
+            
+            logger.info(f"Tamamlanmış profil verileri başarıyla kaydedildi: {profile_file}")
+            return True
+        except Exception as e:
+            logger.error(f"Tamamlanmış profil verileri kaydedilemedi: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
+    
     async def save_collaborators(self, session_id: str, collaborators: List[Dict[str, Any]]) -> bool:
         """İşbirlikçi verilerini kaydet"""
         try:

@@ -137,6 +137,19 @@ class ProfileScraperTool:
                 save_success = await self.file_manager.save_profiles(session_id, profiles)
                 if save_success:
                     logger.info(f"Profil verileri kaydedildi: {len(profiles)} profil")
+                    
+                    # JSON dosyasına completed ekle
+                    final_data = {
+                        "profiles": profiles,
+                        "completed": True,
+                        "total_count": len(profiles),
+                        "session_id": session_id,
+                        "completed_at": datetime.now().isoformat()
+                    }
+                    
+                    # Tamamlanmış veriyi kaydet
+                    await self.file_manager.save_completed_profiles(session_id, final_data)
+                    
                     # Sadece profil bulunduysa session'ı tamamlandı olarak işaretle
                     if len(profiles) > 0:
                         await self.file_manager.mark_session_complete(session_id, "main")
@@ -290,6 +303,10 @@ class ProfileScraperTool:
                         profile_id_counter += 1
                         profile_urls.add(url)
                         logger.info(f"Profil eklendi: {name} - {url}")
+                        
+                        # Her profil bulunduğunda dosyayı güncelle (real-time streaming için)
+                        await self.file_manager.save_profiles(session_id, profiles)
+                        
                         # Streaming update
                         if stream_manager:
                             await stream_manager._send_update(session_id, {

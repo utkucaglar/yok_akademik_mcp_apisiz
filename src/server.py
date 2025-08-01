@@ -22,6 +22,7 @@ from mcp.types import (
 
 from .tools.profile_scraper import ProfileScraperTool
 from .tools.collaborator_scraper import CollaboratorScraperTool
+from .tools.live_scraper_chat import live_scraper_chat
 from .utils.stream_manager import stream_manager
 
 
@@ -75,6 +76,48 @@ async def handle_list_tools() -> list[Tool]:
                     }
                 },
                 "required": ["name"]
+            }
+        ),
+        Tool(
+            name="live_scraper_chat",
+            description="Scraping yaparken canlı bilgi paylaşır - Real-time streaming chat tool",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "messages": {
+                        "type": "array",
+                        "description": "Chat mesajları",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "role": {"type": "string"},
+                                "content": {"type": "string"}
+                            }
+                        }
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maksimum sonuç sayısı",
+                        "optional": True,
+                        "default": 50
+                    },
+                    "field_id": {
+                        "type": "integer",
+                        "description": "Alan ID",
+                        "optional": True
+                    },
+                    "specialty_ids": {
+                        "type": "string",
+                        "description": "Uzmanlık ID'leri",
+                        "optional": True
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "Email filtreleme",
+                        "optional": True
+                    }
+                },
+                "required": ["messages"]
             }
         ),
         Tool(
@@ -139,6 +182,23 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[Tex
         if name == "search_academic_profiles":
             result = await profile_scraper.search_profiles(**arguments)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "live_scraper_chat":
+            # Chat tool için streaming response
+            messages = arguments.get("messages", [])
+            chat_kwargs = {k: v for k, v in arguments.items() if k != "messages"}
+            
+            # İlk response'u hemen gönder
+            first_response = None
+            async for response in live_scraper_chat.handle_chat_request(messages, **chat_kwargs):
+                if first_response is None:
+                    first_response = response
+                    break
+            
+            if first_response:
+                return [TextContent(type="text", text=json.dumps(first_response, ensure_ascii=False, indent=2))]
+            else:
+                return [TextContent(type="text", text=json.dumps({"error": "No response generated"}, ensure_ascii=False, indent=2))]
         
         elif name == "get_collaborators":
             result = await collaborator_scraper.get_collaborators(**arguments)
