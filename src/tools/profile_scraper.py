@@ -222,7 +222,7 @@ class ProfileScraperTool:
                 
                 # Yöntem 1: Link text ile
                 try:
-                    akademisyenler_link = WebDriverWait(driver, 5).until(
+                    akademisyenler_link = WebDriverWait(driver, 3).until(
                         EC.element_to_be_clickable((By.LINK_TEXT, "Akademisyenler"))
                     )
                 except:
@@ -231,7 +231,7 @@ class ProfileScraperTool:
                 # Yöntem 2: Partial text ile
                 if not akademisyenler_link:
                     try:
-                        akademisyenler_link = WebDriverWait(driver, 5).until(
+                        akademisyenler_link = WebDriverWait(driver, 3).until(
                             EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, "Akademisyen"))
                         )
                     except:
@@ -264,14 +264,14 @@ class ProfileScraperTool:
                 logger.info(f"{page_num}. sayfa yükleniyor...")
                 
                 # Sayfa yüklenmesini bekle
-                await asyncio.sleep(2)
+                await asyncio.sleep(1)
                 
                 # Profil satırlarını farklı yöntemlerle bul
                 profile_rows = []
                 
                 # Yöntem 1: authorInfo_ ile başlayan ID'ler
                 try:
-                    WebDriverWait(driver, 8).until(
+                    WebDriverWait(driver, 5).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "tr[id^='authorInfo_']"))
                     )
                     profile_rows = driver.find_elements(By.CSS_SELECTOR, "tr[id^='authorInfo_']")
@@ -542,8 +542,8 @@ class ProfileScraperTool:
                 request, session_id, None, []
             ))
             
-            # 30 saniye bekle ve ilk sonuçları al
-            await asyncio.sleep(30)
+            # 20 saniye bekle ve ilk sonuçları al (Smithery için optimize edildi)
+            await asyncio.sleep(20)
             
             # Session dosyasını kontrol et
             session_data = await self.file_manager.load_session_data(session_id, "profiles")

@@ -62,9 +62,15 @@ class SeleniumManager:
         options.add_experimental_option('useAutomationExtension', False)
         options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         
-        # Performans optimizasyonları - JavaScript'i devre dışı bırakma
+        # Performans optimizasyonları - Smithery için hızlandırıldı
         prefs = {
             "profile.managed_default_content_settings.images": 2,
+            "profile.managed_default_content_settings.javascript": 1,  # JS aktif
+            "profile.managed_default_content_settings.plugins": 2,
+            "profile.managed_default_content_settings.popups": 2,
+            "profile.managed_default_content_settings.geolocation": 2,
+            "profile.managed_default_content_settings.notifications": 2,
+            "profile.managed_default_content_settings.media_stream": 2,
         }
         options.add_experimental_option("prefs", prefs)
         
@@ -102,7 +108,7 @@ class SeleniumManager:
             logger.error(f"Sayfa yüklenemedi {url}: {e}")
             return False
     
-    async def wait_for_element(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 3):
+    async def wait_for_element(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 2):
         """Element için bekle ve element'i döndür"""
         try:
             element = WebDriverWait(driver, timeout).until(
@@ -113,7 +119,7 @@ class SeleniumManager:
             logger.error(f"Element bulunamadı {by}={value}: {e}")
             return None
     
-    async def wait_for_clickable(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 3):
+    async def wait_for_clickable(self, driver: webdriver.Chrome, by: By, value: str, timeout: int = 2):
         """Tıklanabilir element için bekle"""
         try:
             WebDriverWait(driver, timeout).until(
