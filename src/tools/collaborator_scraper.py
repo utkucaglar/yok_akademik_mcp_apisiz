@@ -51,7 +51,9 @@ class CollaboratorScraperTool:
                 }
             
             # WebDriver ile scraping başlat
-            async with self.selenium_manager.get_driver() as driver:
+            driver = await self.selenium_manager.get_driver()
+            
+            try:
                 collaborators = await self._scrape_collaborators(driver, profile_url)
                 
                 # Sonuçları kaydet
@@ -64,6 +66,9 @@ class CollaboratorScraperTool:
                     "total_count": len(collaborators),
                     "status": "completed"
                 }
+            finally:
+                # Driver'ı kapat
+                await self.selenium_manager.close_driver(driver)
                 
         except Exception as e:
             logger.error(f"İşbirlikçi scraping hatası: {e}")

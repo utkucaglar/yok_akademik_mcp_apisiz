@@ -205,6 +205,7 @@ class FileManager:
         
         status = {
             "session_id": session_id,
+            "status": "found" if profile_file.exists() else "not_found",
             "profiles_count": 0,
             "collaborators_count": 0,
             "profiles_completed": profile_done.exists(),
