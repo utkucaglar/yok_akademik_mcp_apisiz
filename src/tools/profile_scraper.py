@@ -465,6 +465,150 @@ class ProfileScraperTool:
         """Session durumunu kontrol et"""
         return await self.file_manager.get_session_status(session_id)
     
+    async def quick_search_profiles(self, name: str, max_results: int = 100) -> Dict[str, Any]:
+        """Hızlı arama - ilk 10 profili hemen göster"""
+        try:
+            logger.info(f"Quick search başlatıldı: {name}")
+            
+            # Session ID oluştur
+            session_id = self._generate_session_id()
+            logger.info(f"Quick search session: {session_id}")
+            
+            # Request oluştur
+            request = SearchRequest(name=name, max_results=max_results)
+            
+            # Arka planda scraping başlat
+            asyncio.create_task(self._async_scrape_profiles(
+                request, session_id, None, []
+            ))
+            
+            # 30 saniye bekle ve ilk sonuçları al
+            await asyncio.sleep(30)
+            
+            # Session dosyasını kontrol et
+            session_data = await self.file_manager.load_session_data(session_id, "profiles")
+            if session_data and session_data.get("profiles"):
+                profiles = session_data["profiles"]
+                # İlk 10 profili göster
+                preview_profiles = profiles[:10]
+                
+                return {
+                    "success": True,
+                    "session_id": session_id,
+                    "message": f"'{name}' için hızlı arama tamamlandı!",
+                    "preview_count": len(preview_profiles),
+                    "total_found": len(profiles),
+                    "max_results": max_results,
+                    "preview_profiles": preview_profiles,
+                    "next_steps": [
+                        "check_scraping_status ile durum kontrol edebilirsiniz",
+                        "get_full_results ile tüm sonuçları alabilirsiniz"
+                    ]
+                }
+            else:
+                return {
+                    "success": False,
+                    "session_id": session_id,
+                    "message": f"'{name}' için arama başlatıldı, henüz sonuç yok",
+                    "next_steps": [
+                        "check_scraping_status ile durum kontrol edin"
+                    ]
+                }
+                
+        except Exception as e:
+            logger.error(f"Quick search error: {e}")
+            return {
+                "error": f"Hızlı arama hatası: {str(e)}",
+                "name": name
+            }
+    
+    async def check_scraping_status(self, session_id: str) -> Dict[str, Any]:
+        """Scraping durumunu kontrol et"""
+        try:
+            logger.info(f"Scraping status kontrol ediliyor: {session_id}")
+            
+            # Session durumunu kontrol et
+            status = await self.file_manager.get_session_status(session_id)
+            
+            # Session dosyasını oku
+            session_data = await self.file_manager.load_session_data(session_id, "profiles")
+            
+            if session_data and session_data.get("profiles"):
+                profiles = session_data["profiles"]
+                completed = status.get("profiles_completed", False)
+                
+                return {
+                    "success": True,
+                    "session_id": session_id,
+                    "status": "completed" if completed else "in_progress",
+                    "profiles_found": len(profiles),
+                    "completed": completed,
+                    "message": f"Scraping durumu: {len(profiles)} profil bulundu" + (" (tamamlandı)" if completed else " (devam ediyor)")
+                }
+            else:
+                return {
+                    "success": False,
+                    "session_id": session_id,
+                    "status": "not_found",
+                    "message": "Session bulunamadı veya henüz sonuç yok"
+                }
+                
+        except Exception as e:
+            logger.error(f"Status check error: {e}")
+            return {
+                "error": f"Durum kontrol hatası: {str(e)}",
+                "session_id": session_id
+            }
+    
+    async def get_full_results(self, session_id: str, max_results: int = 50) -> Dict[str, Any]:
+        """Tamamlanmış sonuçları getir"""
+        try:
+            logger.info(f"Full results getiriliyor: {session_id}")
+            
+            # Session dosyasını oku
+            session_data = await self.file_manager.load_session_data(session_id, "profiles")
+            if not session_data or not session_data.get("profiles"):
+                return {
+                    "error": "Session bulunamadı veya profil verisi yok",
+                    "session_id": session_id
+                }
+            
+            profiles = session_data["profiles"]
+            
+            # Maksimum sonuç sayısını sınırla
+            limited_profiles = profiles[:max_results]
+            
+            # Detaylı bilgileri formatla
+            detailed_profiles = []
+            for profile in limited_profiles:
+                detailed_profile = {
+                    "name": profile.get("name", "N/A"),
+                    "title": profile.get("title", "N/A"),
+                    "university": profile.get("header", "N/A").split("/")[0] if profile.get("header") else "N/A",
+                    "email": profile.get("email", ""),
+                    "profile_url": profile.get("url", ""),
+                    "photo_url": profile.get("photoUrl", ""),
+                    "labels": [profile.get("green_label", ""), profile.get("blue_label", "")],
+                    "keywords": profile.get("keywords", ""),
+                    "full_header": profile.get("header", "N/A")
+                }
+                detailed_profiles.append(detailed_profile)
+            
+            return {
+                "success": True,
+                "session_id": session_id,
+                "total_found": len(profiles),
+                "shown_count": len(limited_profiles),
+                "profiles": detailed_profiles
+            }
+            
+        except Exception as e:
+            logger.error(f"Full results error: {e}")
+            return {
+                "error": f"Sonuçlar alınırken hata: {str(e)}",
+                "session_id": session_id
+            }
+    
     async def get_profile_details_from_session(self, session_id: str, profile_name: str, max_results: int = 10) -> Dict[str, Any]:
         """Session dosyasından belirli bir akademisyenin detaylarını getir"""
         try:

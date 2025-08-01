@@ -22,8 +22,6 @@ from mcp.types import (
 
 from .tools.profile_scraper import ProfileScraperTool
 from .tools.collaborator_scraper import CollaboratorScraperTool
-from .tools.live_scraper_chat import live_scraper_chat
-from .utils.stream_manager import stream_manager
 
 
 # Logging konfigürasyonu
@@ -43,58 +41,16 @@ collaborator_scraper = CollaboratorScraperTool()
 async def handle_list_tools() -> list[Tool]:
     """List available tools."""
     return [
+
         Tool(
-            name="search_academic_profiles",
-            description="❌ DEPRECATED: Eski arama tool'u - live_scraper_chat kullanın",
+            name="quick_search",
+            description="⚡ HIZLI ARAMA: Akademisyen arama yapar ve ilk 10 profili hemen gösterir (30 saniye)",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "name": {
                         "type": "string",
                         "description": "Aranacak akademisyen adı"
-                    },
-                    "field_id": {
-                        "type": "integer",
-                        "description": "Alan ID (fields.json'dan)",
-                        "optional": True
-                    },
-                    "specialty_ids": {
-                        "type": "string",
-                        "description": "Uzmanlık ID'leri (virgülle ayrılmış)",
-                        "optional": True
-                    },
-                    "email": {
-                        "type": "string",
-                        "description": "Email ile filtreleme",
-                        "optional": True
-                    },
-                    "max_results": {
-                        "type": "integer",
-                        "description": "Maksimum sonuç sayısı (varsayılan: 100)",
-                        "optional": True,
-                        "default": 100
-                    }
-                },
-                "required": ["name"]
-            }
-        ),
-        Tool(
-            name="live_scraper_chat",
-            type="chat",
-            description="🔴 LIVE SCRAPING: Akademisyen arama yaparken canlı sonuçları gösterir - Real-time streaming chat tool",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "messages": {
-                        "type": "array",
-                        "description": "Chat mesajları",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "role": {"type": "string"},
-                                "content": {"type": "string"}
-                            }
-                        }
                     },
                     "max_results": {
                         "type": "integer",
@@ -118,7 +74,7 @@ async def handle_list_tools() -> list[Tool]:
                         "optional": True
                     }
                 },
-                "required": ["messages"]
+                "required": ["name"]
             }
         ),
         Tool(
@@ -145,58 +101,42 @@ async def handle_list_tools() -> list[Tool]:
                 "required": ["session_id"]
             }
         ),
+
         Tool(
-            name="get_session_status",
-            description="Session durumunu kontrol eder",
+            name="check_scraping_status",
+            description="📊 Scraping durumunu kontrol eder ve kaç profil bulunduğunu gösterir",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "session_id": {
                         "type": "string",
-                        "description": "Session ID"
+                        "description": "Session ID (quick_search'ten alınan)"
                     }
                 },
                 "required": ["session_id"]
             }
         ),
         Tool(
-            name="get_stream_updates",
-            description="Stream güncellemelerini alır",
+            name="get_full_results",
+            description="📋 Tamamlanmış scraping sonuçlarını getirir",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "session_id": {
                         "type": "string",
-                        "description": "Session ID"
-                    }
-                },
-                "required": ["session_id"]
-            }
-        ),
-        Tool(
-            name="get_profile_details",
-            description="📋 Scrape edilmiş profillerden detaylı bilgi getirir",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "session_id": {
-                        "type": "string",
-                        "description": "Session ID (live_scraper_chat'ten alınan)"
-                    },
-                    "profile_name": {
-                        "type": "string",
-                        "description": "Aranacak akademisyen adı (tam eşleşme)"
+                        "description": "Session ID (quick_search'ten alınan)"
                     },
                     "max_results": {
                         "type": "integer",
                         "description": "Maksimum sonuç sayısı",
                         "optional": True,
-                        "default": 10
+                        "default": 50
                     }
                 },
-                "required": ["session_id", "profile_name"]
+                "required": ["session_id"]
             }
         ),
+
 
     ]
 
@@ -204,43 +144,29 @@ async def handle_list_tools() -> list[Tool]:
 async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextContent]:
     """Handle tool calls."""
     try:
-        if name == "search_academic_profiles":
-            result = await profile_scraper.search_profiles(**arguments)
+        if name == "quick_search":
+            # Hızlı arama - ilk 10 profili hemen göster
+            name = arguments.get("name", "")
+            max_results = arguments.get("max_results", 100)
+            
+            result = await profile_scraper.quick_search_profiles(name, max_results)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
-        elif name == "live_scraper_chat":
-            # Chat tool için streaming response
-            messages = arguments.get("messages", [])
-            chat_kwargs = {k: v for k, v in arguments.items() if k != "messages"}
-            
-            # Streaming response'ları direkt olarak yield et
-            responses = []
-            async for response in live_scraper_chat.handle_chat_request(messages, **chat_kwargs):
-                responses.append(TextContent(type="text", text=json.dumps(response, ensure_ascii=False, indent=2)))
-            
-            return responses
+        elif name == "check_scraping_status":
+            # Scraping durumunu kontrol et
+            session_id = arguments["session_id"].strip()
+            result = await profile_scraper.check_scraping_status(session_id)
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+        
+        elif name == "get_full_results":
+            # Tamamlanmış sonuçları getir
+            session_id = arguments["session_id"].strip()
+            max_results = arguments.get("max_results", 50)
+            result = await profile_scraper.get_full_results(session_id, max_results)
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
         elif name == "get_collaborators":
             result = await collaborator_scraper.get_collaborators(**arguments)
-            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
-        
-        elif name == "get_session_status":
-            session_id = arguments["session_id"].strip()
-            result = await profile_scraper.get_session_status(session_id)
-            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
-        
-        elif name == "get_stream_updates":
-            session_id = arguments["session_id"].strip()
-            result = await stream_manager.get_updates(session_id)
-            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
-        
-        elif name == "get_profile_details":
-            session_id = arguments["session_id"].strip()
-            profile_name = arguments["profile_name"].strip()
-            max_results = arguments.get("max_results", 10)
-            
-            # Session dosyasından profilleri oku
-            result = await profile_scraper.get_profile_details_from_session(session_id, profile_name, max_results)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
         
         else:
